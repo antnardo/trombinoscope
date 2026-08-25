@@ -24,10 +24,7 @@ jobs:
         if: github.event_name == 'release'
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          pkg=$(uvx --from tomli python -c "
-          import tomli, pathlib
-          print(tomli.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])
-          ")
+          pkg=$(python3 -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
           echo "tag=$tag paquet=$pkg"
           test "$tag" = "$pkg"
       - run: uvx twine check dist/*

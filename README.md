@@ -107,7 +107,8 @@ from trombinoscope import load_sqlite
 people = load_sqlite("base.db", "SELECT nom, prenom, redoublant AS badge FROM eleves ORDER BY nom")
 ```
 
-Voir [`examples/`](examples/) pour un script complet branché sur une base réelle.
+Les [`examples/`](examples/) vont du minimal en trois lignes au tour complet des
+options, jusqu'à un cas réel branché sur une base SQLite.
 
 ## Quand utiliser autre chose
 

@@ -114,7 +114,7 @@ noms français, retriez ensuite avec `remove_accents`, l'ordre SQL comparant les
 points de code et plaçant « Étienne » après « Zola ».
 
 Un exemple complet, branché sur une vraie base de classe préparatoire, est dans
-[`examples/trombi_mp_sqlite.py`](../examples/trombi_mp_sqlite.py).
+[`examples/03_sqlite_prepa.py`](../examples/03_sqlite_prepa.py).
 
 ## 3. La ligne de commande
 

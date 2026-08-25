@@ -266,7 +266,7 @@ Huit champs positionnels, dont six ne veulent rien dire hors d'une CPGE
 française. Remplacé par `Person(last_name, first_name, tags, groups, badge)`,
 deux listes libres d'étiquettes couvrant le cas d'origine sans imposer son
 vocabulaire. La table de correspondance est dans [DOC.md](DOC.md), section 10, et
-`examples/trombi_mp_sqlite.py` montre la conversion sur la vraie base.
+`examples/03_sqlite_prepa.py` montre la conversion sur une vraie base.
 
 ### 4.8 Fonctionnalités présentes mais jamais branchées
 

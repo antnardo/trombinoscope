@@ -40,8 +40,9 @@ jamais publié, qui produisait les trombinoscopes d'une classe préparatoire.
   `logo_width`, `logo_margin` et `logo_offset` : placement des annotations
   pivotées, de l'étoile et du logo. Le logo se pose par défaut en haut à droite,
   et l'étoile est centrée sur le coin de la photo.
-- `examples/trombi_mp_sqlite.py` : reproduction d'un trombinoscope de classe
-  préparatoire depuis sa base SQLite, avec la mise en page historique.
+- `examples/` : trois exemples commentés — minimal, tour complet des options,
+  et reproduction d'un trombinoscope de classe préparatoire depuis sa base
+  SQLite avec la mise en page historique.
 - `BuildReport` : rapport structuré des personnes sans photo, photos sans
   personne, photos sans visage et photos à plusieurs visages.
 - `GridPaginator` : pagination testable indépendamment de ReportLab.

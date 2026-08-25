@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Les portraits d'exemple ne sont pas versionnés : rien ne doit jamais écrire
+  # de photographie dans le dépôt.
+  SAMPLES_DIR: tests/data/portraits
+
+jobs:
+  lint:
+    name: Lint et typage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --group dev
+      - name: ruff format
+        run: uv run ruff format --check src tests scripts
+      - name: ruff check
+        run: uv run ruff check src tests scripts
+      - name: mypy
+        run: uv run mypy
+        continue-on-error: true  # informatif tant que l'annotation n'est pas complète
+
+  test:
+    name: Tests ${{ matrix.python }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - run: uv sync --group dev
+      - name: Tests unitaires (sans réseau)
+        run: uv run pytest -m "not integration" --cov --cov-report=xml
+      - name: Vérifier qu'aucune photo n'a été ajoutée au dépôt
+        shell: bash
+        run: |
+          if [ -n "$(git status --porcelain "$SAMPLES_DIR" 2>/dev/null)" ]; then
+            echo "::error::des fichiers sont apparus dans $SAMPLES_DIR"
+            git status --porcelain "$SAMPLES_DIR"
+            exit 1
+          fi
+
+  integration:
+    name: Intégration (détection réelle)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --group dev
+      - name: Récupérer les portraits d'exemple
+        run: uv run python scripts/fetch_samples.py
+      - name: Tests d'intégration
+        run: uv run pytest -m integration -v
+      - name: Planche de comparaison colorimétrique
+        run: uv run python scripts/color_bench.py --output artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: comparaison-couleur
+          path: artifacts/
+          retention-days: 14
+
+  build:
+    name: Construire la distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build
+      - name: Vérifier les métadonnées
+        run: uvx twine check dist/*
+      - name: Vérifier que la roue reste légère
+        run: |
+          size=$(stat -c%s dist/*.whl)
+          echo "roue : $((size / 1024)) Kio"
+          # Le modèle YuNet pèse 227 Kio ; au-delà de 2 Mio, c'est qu'un fichier
+          # lourd s'est glissé dans le paquet.
+          test "$size" -lt 2097152
+      - name: Vérifier qu'aucune photo n'est distribuée
+        run: python scripts/check_no_photos.py dist/*.whl dist/*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  smoke:
+    name: Installation depuis la roue
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installer et lancer la CLI
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          trombinoscope --version
+          trombinoscope template classe.csv
+          test -s classe.csv

@@ -1,0 +1,38 @@
+# Photographies : le dépôt n'en contient aucune, et ne doit jamais en contenir.
+# Les tests d'intégration les téléchargent via scripts/fetch_samples.py.
+tests/data/portraits/
+*.jpg
+*.jpeg
+*.heic
+*.heif
+# Exception : la silhouette de remplacement, dessinée par scripts/make_placeholder.py
+!src/trombinoscope/assets/placeholder.png
+
+# Sorties de travail
+artifacts/
+portraits/
+detections/
+*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Outils
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Systèmes
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

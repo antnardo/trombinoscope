@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
       - run: uv build
       - name: Vérifier que la version du tag correspond au paquet
         if: github.event_name == 'release'

@@ -24,6 +24,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
       - run: uv sync --group dev
       - name: ruff format
         run: uv run ruff format --check src tests scripts
@@ -46,6 +47,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
           python-version: ${{ matrix.python }}
       - run: uv sync --group dev
       - name: Tests unitaires (sans réseau)
@@ -67,6 +69,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
       - run: uv sync --group dev
       - name: Récupérer les portraits d'exemple
         run: uv run python scripts/fetch_samples.py
@@ -86,6 +89,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
       - run: uv build
       - name: Vérifier les métadonnées
         run: uvx twine check dist/*
@@ -110,6 +116,11 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+    # Ce job installe la roue dans un répertoire vierge : pas de checkout, donc
+    # pas de pyproject.toml pour la clé de cache de setup-python. On cache le
+    # répertoire pip à la main, réenregistré dès que la roue change de contenu.
+    env:
+      PIP_CACHE_DIR: ${{ github.workspace }}/.pip-cache
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -118,10 +129,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.pip-cache
+          key: pip-smoke-${{ runner.os }}-${{ hashFiles('dist/*.whl') }}
+          restore-keys: pip-smoke-${{ runner.os }}-
       - name: Installer et lancer la CLI
         shell: bash
         run: |
-          python -m pip install --upgrade pip
           python -m pip install dist/*.whl
           trombinoscope --version
           trombinoscope template classe.csv

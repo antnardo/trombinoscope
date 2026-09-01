@@ -22,7 +22,7 @@ from reportlab_layout import PDFMaker, image_spec
 
 from trombinoscope.log import debug, info
 from trombinoscope.models import GridConfig, Person
-from trombinoscope.pdf.canvas import draw_star, styles
+from trombinoscope.pdf.canvas import styles
 
 
 def join_annotations(parts) -> str:
@@ -341,10 +341,22 @@ class TrombiRenderer:
             # donc de moitié — c'est voulu, elle se lit comme une pastille posée.
             inset = config.badge_inset * mm
             vertical, horizontal = corner_parts(config.badge_corner)
-            draw_star(
-                doc.canvas,
-                photo_left + (photo_width - inset if horizontal == "right" else inset),
-                photo_bottom + (photo_height - inset if vertical == "top" else inset),
+            star_x = photo_left + (photo_width - inset if horizontal == "right" else inset)
+            star_y = photo_bottom + (photo_height - inset if vertical == "top" else inset)
+            radius = config.badge_radius * mm
+            # Pastille blanche cerclée de noir : l'étoile est posée à cheval sur
+            # le coin de la photo, elle doit rester lisible quel que soit le
+            # cliché. Tracée sur le canevas brut, ShapePainter n'ayant pas encore
+            # de cercle.
+            canvas = doc.canvas
+            canvas.saveState()
+            canvas.setFillColorRGB(1, 1, 1)
+            canvas.setStrokeColorRGB(0, 0, 0)
+            canvas.setLineWidth(0.4)
+            canvas.circle(star_x, star_y, radius * 1.5, stroke=1, fill=1)
+            canvas.restoreState()
+            doc.draw_regular_polygon(
+                star_x, star_y, radius, vertices=5, leap=2, fill="black", line_join=1
             )
 
 

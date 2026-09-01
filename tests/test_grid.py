@@ -347,3 +347,23 @@ class TestNameFontSize:
     def test_name_leading_invalide(self):
         with pytest.raises(ValueError, match="name_leading"):
             GridConfig(name_leading=0.0)
+
+
+class TestBadgeRadius:
+    def test_radius_changes_the_star(self, tmp_path):
+        petit = render_pdf(
+            [Person("HOPPER", "Grace", badge=True)],
+            tmp_path / "a.pdf",
+            config=GridConfig(badge_radius=0.8),
+        ).read_bytes()
+        grand = render_pdf(
+            [Person("HOPPER", "Grace", badge=True)],
+            tmp_path / "b.pdf",
+            config=GridConfig(badge_radius=3.0),
+        ).read_bytes()
+        assert petit != grand
+
+    @pytest.mark.parametrize("valeur", [0.0, -1.0])
+    def test_radius_invalide(self, valeur: float):
+        with pytest.raises(ValueError, match="badge_radius"):
+            GridConfig(badge_radius=valeur)

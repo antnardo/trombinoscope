@@ -5,6 +5,21 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.2.1]
+
+### Modifié
+
+- L'étoile de badge utilise `reportlab_layout.ShapePainter.regular_polygon`
+  (nouveau en 1.1.0) au lieu d'un tracé local. `trombinoscope/pdf/canvas.py`
+  tombe à 37 lignes et ne contient plus que la feuille de styles. Rendu
+  identique, vérifié en comparant la vignette de l'étoile au pixel.
+- Dépendance relevée à `reportlab-layout>=1.1.0`.
+
+### Ajouté
+
+- `GridConfig.badge_radius` — rayon de l'étoile, en millimètres. La pastille
+  blanche qui la porte fait une fois et demie ce rayon.
+
 ## [0.2.0]
 
 ### Modifié
@@ -185,7 +200,8 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.2.0...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.1
 [0.2.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.0
 [0.1.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.1.1
 [0.1.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.1.0

@@ -274,6 +274,9 @@ class GridConfig:
     #: Décalage de l'étoile vers l'intérieur de la photo, en millimètres. À ``0``
     #: elle est centrée sur le coin et déborde donc de moitié.
     badge_inset: float = 0.0
+    #: Rayon de l'étoile, en millimètres. La pastille blanche qui la porte fait
+    #: une fois et demie ce rayon.
+    badge_radius: float = 1.0
     annotation_font: str = "Courier"
     #: taille des annotations pivotées, en points
     annotation_font_size: float = 4.8
@@ -292,6 +295,8 @@ class GridConfig:
             raise ValueError("columns doit être >= 1")
         if not 0 <= self.column_padding < 1:
             raise ValueError("column_padding doit être dans [0, 1[")
+        if self.badge_radius <= 0:
+            raise ValueError("badge_radius doit être strictement positif")
         if self.font_size <= 0:
             raise ValueError("font_size doit être strictement positif")
         if self.name_leading is not None and self.name_leading <= 0:

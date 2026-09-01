@@ -950,15 +950,15 @@ wheels = [
 
 [[package]]
 name = "reportlab-layout"
-version = "1.0.2"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pillow" },
     { name = "reportlab" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5f/49/076a8873c40819fcaa6546cf1f28aa04cf36fb41b3a75eff302db3351831/reportlab_layout-1.0.2.tar.gz", hash = "sha256:8ac078b89fc3e78126a9a86c8fee4e74060d62d8fe676c4ee722296b76b6489e", size = 70216, upload-time = "2026-08-25T14:00:59.217Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/68/e51c23ea959ba1d7f1ffd02d5d27b034d80e99d1b1e5f36927f663527293/reportlab_layout-1.1.0.tar.gz", hash = "sha256:5ee6b83581084ac0252588fad66faeea1bcd6466be70709d02133c10fe76be40", size = 72950, upload-time = "2026-09-01T13:57:24.192Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/23/6b847a8f0dfaa9f76a63e4eae8f4fe10d7da25e8b9955a48317b4730c1c8/reportlab_layout-1.0.2-py3-none-any.whl", hash = "sha256:3c894be8f324aa457fb79842da3644cac6802e20a5077d956d0a24844e363208", size = 26554, upload-time = "2026-08-25T14:00:57.786Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/83/ccc4b398386423fde36d0a9920b0dfdb34fd476181149cbf4930327ddc51/reportlab_layout-1.1.0-py3-none-any.whl", hash = "sha256:e823616d5e3e456616dec7787a870c724b932119dc423047d5241c36a732038c", size = 27799, upload-time = "2026-09-01T13:57:22.991Z" },
 ]
 
 [[package]]
@@ -1042,7 +1042,7 @@ wheels = [
 
 [[package]]
 name = "trombinoscope"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -1074,7 +1074,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=10.0" },
     { name = "pillow-heif", marker = "extra == 'heic'", specifier = ">=0.15" },
     { name = "reportlab", specifier = ">=4.0" },
-    { name = "reportlab-layout", specifier = ">=1.0.2" },
+    { name = "reportlab-layout", specifier = ">=1.1.0" },
 ]
 provides-extras = ["heic"]
 

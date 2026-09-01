@@ -5,6 +5,27 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.2.0]
+
+### Modifié
+
+- **La couche de mise en page passe à [reportlab-layout](https://pypi.org/project/reportlab-layout/).**
+  Le paquet embarquait une réduction maison de 232 lignes au-dessus de ReportLab ;
+  elle disparaît au profit d'une dépendance, pour que les corrections de mise en
+  page se fassent à un seul endroit. `trombinoscope/pdf/canvas.py` tombe à 78
+  lignes et ne contient plus que la feuille de styles et l'étoile de badge.
+  Le rendu est **inchangé au pixel près** — vérifié contre un document de
+  référence : même position de titre, même pas de ligne, même logo, mêmes marges.
+- `title_top` et `title_skip` reposent maintenant sur `PDFMaker.add_space`, qui
+  compte nativement en hauteurs de ligne. L'unité et les valeurs ne changent pas.
+- Le pied de page utilise un style `Pied` explicite plutôt qu'un `Footer` dérivé
+  de la feuille par défaut.
+
+### Retiré
+
+- `trombinoscope.pdf.canvas.PdfCanvas`. `from trombinoscope.pdf.canvas import styles`
+  continue de fonctionner : c'est ce qu'utilisent les scripts appelants.
+
 ## [0.1.1]
 
 ### Corrigé
@@ -164,6 +185,7 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.1.1...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.0
 [0.1.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.1.1
 [0.1.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.1.0

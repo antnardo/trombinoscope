@@ -35,6 +35,7 @@ uv run python scripts/make_placeholder.py
 | [opencv-python-headless](https://github.com/opencv/opencv-python) | Apache-2.0 (OpenCV), MIT (l'empaquetage) |
 | [Pillow](https://python-pillow.org/) | MIT-CMU |
 | [ReportLab](https://www.reportlab.com/) | BSD-3-Clause |
+| [reportlab-layout](https://pypi.org/project/reportlab-layout/) | MIT |
 | [pillow-heif](https://github.com/bigcat88/pillow_heif) *(extra `heic`)* | BSD-3-Clause / LGPL-3.0 pour libheif |
 
 ## Images de test

@@ -18,10 +18,16 @@ from pathlib import Path
 
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab_layout import PDFMaker, image_spec
 
 from trombinoscope.log import debug, info
 from trombinoscope.models import GridConfig, Person
-from trombinoscope.pdf.canvas import PdfCanvas, fit_width, join_annotations, styles
+from trombinoscope.pdf.canvas import draw_star, styles
+
+
+def join_annotations(parts) -> str:
+    """Assemble des étiquettes en une ligne, en ignorant les vides."""
+    return ", ".join(part for part in parts if part)
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,26 +144,27 @@ class TrombiRenderer:
         subtitle: str = "",
     ) -> Path:
         config = self._config
-        canvas = PdfCanvas(
+        doc = PDFMaker(
             path,
-            margin_left=config.margin_left,
-            margin_right=config.margin_right,
-            margin_top=config.margin_top,
-            margin_bottom=config.margin_bottom,
-            font_size=config.font_size,
             landscape=config.landscape,
+            left=config.margin_left,
+            right=config.margin_right,
+            top=config.margin_top,
+            bottom=config.margin_bottom,
+            font_size=config.font_size,
+            stylesheet=styles,
         )
-        canvas.set_metadata(title=title or "Trombinoscope", subject=subtitle)
-        canvas.set_footer(f"Version du {date.today():%d/%m/%Y}")
+        doc.set_metadata(title=title or "Trombinoscope", subject=subtitle)
+        doc.set_footer(doc.make_paragraph(f"Version du {date.today():%d/%m/%Y}", "Pied"))
 
         names = self._name_style()
-        photo_width = canvas.content_width / config.columns * (1 - config.column_padding)
+        photo_width = doc.content_width / config.columns * (1 - config.column_padding)
         photo_height = photo_width * self._portrait_ratio(people)
-        name_height = canvas.paragraph_height("<b>X</b><br/>Y", names, photo_width)
+        name_height = doc.make_paragraph("<b>X</b><br/>Y", names).wrap(photo_width, doc.height)[1]
         row_height = photo_height + name_height + config.line_skip
 
-        grid_top = self._draw_header(canvas, title, subtitle)
-        available = grid_top - canvas.bottom
+        grid_top = self._draw_header(doc, title, subtitle)
+        available = grid_top - doc.y_bottom
         rows_per_page = int(available // row_height)
         info(
             "photo %.1f × %.1f mm, %d ligne(s) par page",
@@ -169,11 +176,12 @@ class TrombiRenderer:
         pages = GridPaginator(config).paginate(people, rows_per_page)
         for index, page in enumerate(pages):
             if index > 0:
-                canvas.new_page()
-                grid_top = self._draw_header(canvas, title, subtitle)
-            self._draw_page(canvas, page, grid_top, photo_width, photo_height, row_height, names)
+                doc.new_page()
+                grid_top = self._draw_header(doc, title, subtitle)
+            self._draw_page(doc, page, grid_top, photo_width, photo_height, row_height, names)
 
-        result = canvas.save()
+        doc.save()
+        result = Path(path)
         info("PDF écrit : %s (%d page(s))", result, len(pages))
         return result
 
@@ -204,40 +212,44 @@ class TrombiRenderer:
         """
         for person in people:
             if person.portrait and Path(person.portrait).exists():
-                width, height = fit_width(person.portrait, 1.0)
-                return height / width
+                return image_spec(person.portrait).aspect
         return 4 / 3
 
-    def _draw_header(self, canvas: PdfCanvas, title: str, subtitle: str) -> float:
-        config = self._config
-        line = config.font_size
-        cursor = canvas.top - config.title_top * line
-        if title:
-            cursor -= canvas.draw_paragraph(
-                title, "Titre", x=canvas.left, y=cursor, width=canvas.content_width
-            )
-        if subtitle:
-            cursor -= canvas.draw_paragraph(
-                subtitle, "Centered", x=canvas.left, y=cursor, width=canvas.content_width
-            )
-        if config.show_logo and self._logo is not None and Path(self._logo).exists():
-            self._draw_logo(canvas)
-        return cursor - config.title_skip * line
+    def _draw_header(self, doc: PDFMaker, title: str, subtitle: str) -> float:
+        """Titre et logo, puis renvoie l'ordonnée où commence la grille.
 
-    def _draw_logo(self, canvas: PdfCanvas) -> None:
+        Le titre est posé *dans le flux* : le curseur de ``reportlab_layout``
+        avance de la hauteur du paragraphe, espaces de style compris, et
+        ``add_space`` compte en hauteurs de ligne — exactement l'unité de
+        ``title_top`` et ``title_skip``.
+        """
+        config = self._config
+        doc.reset_cursor()
+        doc.add_space(config.title_top)
+        if title:
+            doc.draw_paragraph(title, "Titre")
+        if subtitle:
+            doc.draw_paragraph(subtitle, "Centered")
+        doc.add_space(config.title_skip)
+        if config.show_logo and self._logo is not None and Path(self._logo).exists():
+            self._draw_logo(doc)
+        return doc.cursor_y
+
+    def _draw_logo(self, doc: PDFMaker) -> None:
         """Place le logo dans l'un des quatre coins de la zone de contenu."""
         config = self._config
-        width, height = fit_width(self._logo, config.logo_width * mm)
+        width = config.logo_width * mm
+        height = width * image_spec(self._logo).aspect
         margin = config.logo_margin * mm
         offset_x, offset_y = (value * mm for value in config.logo_offset)
         vertical, horizontal = corner_parts(config.logo_position)
-        x = canvas.right - width - margin if horizontal == "right" else canvas.left + margin
-        y = canvas.top - height if vertical == "top" else canvas.bottom
-        canvas.draw_image(self._logo, x=x + offset_x, y=y + offset_y, width=width, height=height)
+        x = doc.x_right - width - margin if horizontal == "right" else doc.x_left + margin
+        y = doc.y_top - height if vertical == "top" else doc.y_bottom
+        doc.draw_image(self._logo, width=width, x=x + offset_x, y=y + offset_y, absolute=True)
 
     def _draw_page(
         self,
-        canvas: PdfCanvas,
+        doc: PDFMaker,
         page: PageLayout,
         grid_top: float,
         photo_width: float,
@@ -246,10 +258,10 @@ class TrombiRenderer:
         names: ParagraphStyle,
     ) -> None:
         config = self._config
-        column_width = canvas.content_width / config.columns
+        column_width = doc.content_width / config.columns
 
         for cell in page.cells:
-            center_x = canvas.left + (cell.column + 0.5) * column_width
+            center_x = doc.x_left + (cell.column + 0.5) * column_width
             photo_left = center_x - photo_width / 2
             photo_top = grid_top - cell.row * row_height
             photo_bottom = photo_top - photo_height
@@ -258,25 +270,32 @@ class TrombiRenderer:
             image = source if source and Path(source).exists() else self._placeholder
             if source is None or not Path(source).exists():
                 debug("pas de portrait pour %s, image de remplacement", cell.person.last_name)
-            canvas.draw_image(
-                image, x=photo_left, y=photo_bottom, width=photo_width, height=photo_height
+            doc.draw_image(
+                image,
+                width=photo_width,
+                height=photo_height,
+                x=photo_left,
+                y=photo_bottom,
+                absolute=True,
             )
 
-            canvas.draw_paragraph(
+            doc.draw_paragraph(
                 f"<b>{_escape(cell.person.last_name)}</b><br/>{_escape(cell.person.first_name)}",
                 names,
                 x=photo_left,
                 y=photo_bottom - 1,
                 width=photo_width,
+                absolute=True,
+                valign="top",
             )
 
             self._draw_annotations(
-                canvas, cell.person, photo_left, photo_bottom, photo_width, photo_height
+                doc, cell.person, photo_left, photo_bottom, photo_width, photo_height
             )
 
     def _draw_annotations(
         self,
-        canvas: PdfCanvas,
+        doc: PDFMaker,
         person: Person,
         photo_left: float,
         photo_bottom: float,
@@ -289,14 +308,18 @@ class TrombiRenderer:
         left_x = photo_left - gutter
         right_x = photo_left + photo_width + gutter + size
 
+        annotation = ParagraphStyle(
+            "Annotation", parent=styles["Normal"], fontName=font, fontSize=size, leading=size
+        )
+
         if config.show_tags and person.tags:
             # Gouttière gauche, texte lu de bas en haut à partir du bas de la photo.
-            canvas.draw_rotated_text(
+            doc.text.draw(
                 join_annotations(person.tags),
-                x=left_x,
-                y=photo_bottom,
-                font=font,
-                size=size,
+                left_x,
+                photo_bottom,
+                style=annotation,
+                angle=90,
             )
 
         if config.show_groups and person.groups:
@@ -304,13 +327,13 @@ class TrombiRenderer:
             # sont calés sur le haut de la photo, donc écrits à l'envers l'un de
             # l'autre ; en "gutters" ils occupent la gouttière droite.
             legacy = config.annotation_layout == "left"
-            canvas.draw_rotated_text(
+            doc.text.draw(
                 join_annotations(person.groups),
-                x=left_x if legacy else right_x,
-                y=photo_bottom + photo_height if legacy else photo_bottom,
-                font=font,
-                size=size,
-                anchor="end" if legacy else "start",
+                left_x if legacy else right_x,
+                photo_bottom + photo_height if legacy else photo_bottom,
+                style=annotation,
+                angle=90,
+                halign="right" if legacy else "left",
             )
 
         if config.show_badges and person.badge:
@@ -318,10 +341,10 @@ class TrombiRenderer:
             # donc de moitié — c'est voulu, elle se lit comme une pastille posée.
             inset = config.badge_inset * mm
             vertical, horizontal = corner_parts(config.badge_corner)
-            canvas.draw_star(
+            draw_star(
+                doc.canvas,
                 photo_left + (photo_width - inset if horizontal == "right" else inset),
                 photo_bottom + (photo_height - inset if vertical == "top" else inset),
-                start_angle=1.5708,
             )
 
 

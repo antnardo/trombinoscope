@@ -33,7 +33,8 @@ puis compose une grille paginée.
   étiquettes pivotées dans les gouttières, silhouette de remplacement pour les
   absents.
 - **Aucune dépendance système.** Ni LaTeX, ni LibreOffice, ni ImageMagick : que
-  des roues Python. Installable en conteneur et en CI.
+  des roues Python. Installable en conteneur et en CI. La mise en page s'appuie
+  sur [reportlab-layout](https://pypi.org/project/reportlab-layout/).
 - **Détecteur léger et remplaçable.** YuNet en ONNX, 227 Ko, embarqué dans la
   roue. Le détecteur est un protocole : branchez le vôtre si vous préférez.
 

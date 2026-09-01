@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "trombinoscope"
-version = "0.1.1"
+version = "0.2.0"
 description = "Génère un trombinoscope PDF prêt à imprimer depuis un dossier de photos brutes et une liste de personnes."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -47,6 +47,10 @@ dependencies = [
     "opencv-python-headless>=4.8",
     "pillow>=10.0",
     "reportlab>=4.0",
+    # Couche de mise en page au-dessus de reportlab : curseur, ancrages
+    # typographiques, texte pivoté. Les corrections de mise en page se font là
+    # plutôt qu'en double ici.
+    "reportlab-layout>=1.0.2",
 ]
 
 [project.optional-dependencies]

@@ -16,11 +16,12 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 
 from trombinoscope.log import debug, info
 from trombinoscope.models import GridConfig, Person
-from trombinoscope.pdf.canvas import PdfCanvas, fit_width, join_annotations
+from trombinoscope.pdf.canvas import PdfCanvas, fit_width, join_annotations, styles
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,9 +150,10 @@ class TrombiRenderer:
         canvas.set_metadata(title=title or "Trombinoscope", subject=subtitle)
         canvas.set_footer(f"Version du {date.today():%d/%m/%Y}")
 
+        names = self._name_style()
         photo_width = canvas.content_width / config.columns * (1 - config.column_padding)
         photo_height = photo_width * self._portrait_ratio(people)
-        name_height = canvas.paragraph_height("<b>X</b><br/>Y", "Noms", photo_width)
+        name_height = canvas.paragraph_height("<b>X</b><br/>Y", names, photo_width)
         row_height = photo_height + name_height + config.line_skip
 
         grid_top = self._draw_header(canvas, title, subtitle)
@@ -169,13 +171,29 @@ class TrombiRenderer:
             if index > 0:
                 canvas.new_page()
                 grid_top = self._draw_header(canvas, title, subtitle)
-            self._draw_page(canvas, page, grid_top, photo_width, photo_height, row_height)
+            self._draw_page(canvas, page, grid_top, photo_width, photo_height, row_height, names)
 
         result = canvas.save()
         info("PDF écrit : %s (%d page(s))", result, len(pages))
         return result
 
     # -- détails ------------------------------------------------------------ #
+
+    def _name_style(self) -> ParagraphStyle:
+        """Style du bloc nom/prénom, dérivé de ``GridConfig``.
+
+        Le style est construit à chaque rendu plutôt que pris tel quel dans la
+        feuille globale : c'est ce qui fait que ``font_size`` agit réellement sur
+        les noms. Le parent reste ``styles["Noms"]``, donc une police ou une
+        couleur posée là par l'appelant est conservée.
+        """
+        config = self._config
+        return ParagraphStyle(
+            "NomsRendu",
+            parent=styles["Noms"],
+            fontSize=config.font_size,
+            leading=config.name_leading or config.font_size * 1.25,
+        )
 
     def _portrait_ratio(self, people: Sequence[Person]) -> float:
         """Rapport hauteur/largeur lu sur le premier portrait disponible.
@@ -225,6 +243,7 @@ class TrombiRenderer:
         photo_width: float,
         photo_height: float,
         row_height: float,
+        names: ParagraphStyle,
     ) -> None:
         config = self._config
         column_width = canvas.content_width / config.columns
@@ -245,7 +264,7 @@ class TrombiRenderer:
 
             canvas.draw_paragraph(
                 f"<b>{_escape(cell.person.last_name)}</b><br/>{_escape(cell.person.first_name)}",
-                "Noms",
+                names,
                 x=photo_left,
                 y=photo_bottom - 1,
                 width=photo_width,

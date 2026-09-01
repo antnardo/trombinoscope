@@ -5,6 +5,32 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.1.1]
+
+### Corrigé
+
+- **`--font-size` n'avait aucun effet sur les noms.** L'option atteignait le
+  canevas ReportLab — donc les `drawString` bruts — mais pas le style
+  `Noms` utilisé pour le bloc nom/prénom, qui restait figé à 10 pt, la taille
+  héritée de `Normal`. Le rendu dérive désormais son propre style de
+  `styles["Noms"]` en y appliquant `font_size`, ce qui fait aussi varier la
+  hauteur des rangées et donc la pagination. Signalé par un utilisateur qui
+  cherchait à faire tenir des noms longs sur douze colonnes.
+
+### Ajouté
+
+- `GridConfig.name_leading` : interligne du bloc nom/prénom, en points.
+  `None` prend `font_size × 1,25`.
+- Validation de `font_size` et `name_leading`, tous deux strictement positifs.
+
+### Modifié
+
+- **`GridConfig.font_size` passe de 12 à 10 pt par défaut.** C'est la taille que
+  les noms avaient en pratique en 0.1.0, quand l'option était inerte : le défaut
+  ne déplace donc aucun rendu existant, seul un `--font-size` explicite agit.
+- `PdfCanvas.draw_paragraph` et `paragraph_height` acceptent un `ParagraphStyle`
+  en plus d'un nom de style.
+
 ## [0.1.0]
 
 Première version publique. C'est la réécriture d'un module personnel de 2020,
@@ -138,5 +164,6 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.1.0...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.1.1
 [0.1.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.1.0

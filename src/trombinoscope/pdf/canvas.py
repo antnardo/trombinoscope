@@ -99,8 +99,13 @@ class PdfCanvas:
 
     # -- dessin ------------------------------------------------------------- #
 
+    @staticmethod
+    def _style(style: "str | ParagraphStyle") -> ParagraphStyle:
+        """Résout un nom de style, ou laisse passer un style déjà construit."""
+        return styles[style] if isinstance(style, str) else style
+
     def draw_paragraph(
-        self, text: str, style_name: str, *, x: float, y: float, width: float
+        self, text: str, style_name: "str | ParagraphStyle", *, x: float, y: float, width: float
     ) -> float:
         """Dessine un paragraphe dont le haut de bloc est à ``y``.
 
@@ -109,14 +114,16 @@ class PdfCanvas:
         faut retrancher au curseur pour enchaîner correctement. Les styles à espace
         nul — ``Noms``, ``Footer`` — se comportent comme avant.
         """
-        paragraph = Paragraph(text, styles[style_name])
+        paragraph = Paragraph(text, self._style(style_name))
         _, height = paragraph.wrap(width, self.content_height)
         before = paragraph.getSpaceBefore()
         paragraph.drawOn(self._canvas, x, y - before - height)
         return before + height + paragraph.getSpaceAfter()
 
-    def paragraph_height(self, text: str, style_name: str, width: float) -> float:
-        _, height = Paragraph(text, styles[style_name]).wrap(width, self.content_height)
+    def paragraph_height(
+        self, text: str, style_name: "str | ParagraphStyle", width: float
+    ) -> float:
+        _, height = Paragraph(text, self._style(style_name)).wrap(width, self.content_height)
         return height
 
     def draw_image(

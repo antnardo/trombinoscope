@@ -240,7 +240,13 @@ class GridConfig:
     margin_right: float = 8.0
     margin_top: float = 5.0
     margin_bottom: float = 5.0
-    font_size: float = 12.0
+    #: Taille du bloc nom/prénom sous chaque photo, en points PostScript.
+    #: 10 pt est la taille que ce bloc avait de fait en 0.1.0, où l'option était
+    #: sans effet ; la garder en défaut évite de déplacer les rendus existants.
+    font_size: float = 10.0
+    #: Interligne de ce bloc, en points. ``None`` prend ``font_size * 1.25``.
+    #: À augmenter pour aérer, à réduire pour serrer deux lignes très proches.
+    name_leading: float | None = None
     #: Blanc entre le bas du titre et la première rangée, en **hauteurs de ligne**
     #: — c'est-à-dire en multiples de ``font_size``, et non en millimètres comme
     #: les marges. Ainsi l'espacement suit la taille du texte quand on la change.
@@ -286,6 +292,10 @@ class GridConfig:
             raise ValueError("columns doit être >= 1")
         if not 0 <= self.column_padding < 1:
             raise ValueError("column_padding doit être dans [0, 1[")
+        if self.font_size <= 0:
+            raise ValueError("font_size doit être strictement positif")
+        if self.name_leading is not None and self.name_leading <= 0:
+            raise ValueError("name_leading doit être strictement positif")
         if self.annotation_layout not in ("gutters", "left"):
             raise ValueError("annotation_layout doit valoir 'gutters' ou 'left'")
         corners = ("top-right", "bottom-right", "top-left", "bottom-left")

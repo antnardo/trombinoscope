@@ -122,7 +122,7 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
     grid.add_argument("-c", "--columns", type=int, default=5)
     grid.add_argument("--padding", type=float, default=0.2, help="blanc par colonne, en fraction")
     grid.add_argument("--line-skip", type=float, default=8.0, help="en points")
-    grid.add_argument("--font-size", type=float, default=12.0)
+    grid.add_argument("--font-size", type=float, default=10.0, help="taille des noms, en points")
     grid.add_argument("--landscape", action="store_true")
     grid.add_argument("--no-center-last-row", action="store_true")
     grid.add_argument("--no-tags", action="store_true")

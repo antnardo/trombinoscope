@@ -179,7 +179,7 @@ possible — un code `1` ne signifie pas qu'il manque.
 | `-c`, `--columns` | `5` | Nombre de colonnes |
 | `--padding` | `0.2` | Blanc par colonne, en fraction |
 | `--line-skip` | `8.0` | Espace entre lignes, en points |
-| `--font-size` | `12.0` | Taille des noms, en points |
+| `--font-size` | `10.0` | Taille du bloc nom/prénom, en points |
 | `--landscape` | — | Page en paysage |
 | `--no-center-last-row` | — | Aligne la dernière ligne à gauche |
 | `--no-tags`, `--no-groups`, `--no-badges` | — | Masque une série d'annotations |
@@ -195,6 +195,7 @@ possible — un code `1` ne signifie pas qu'il manque.
 | `logo_width` | `30.0` | Largeur du logo, en mm |
 | `logo_margin` | `5.0` | Distance au bord de la zone de contenu, en mm |
 | `logo_offset` | `(0.0, 0.0)` | Décalage fin en mm (`x` vers la droite, `y` vers le haut), pour faire mordre le logo sur la marge |
+| `name_leading` | `None` | Interligne du bloc nom/prénom, en points. `None` → `font_size × 1,25` |
 | `title_top` | `0.0` | Blanc au-dessus du titre, en **hauteurs de ligne** (multiples de `font_size`) |
 | `title_skip` | `1.0` | Blanc entre le bas du titre et la première rangée, en hauteurs de ligne |
 
@@ -368,6 +369,23 @@ Le détail complet, avec les mesures, est dans [color.md](color.md). En pratique
   photos.
 
 ## 7. La mise en page
+
+### 7.0 Noms trop longs
+
+`font_size` fixe la taille du bloc nom/prénom. Il n'y a pas de réduction
+automatique : un nom plus large que la colonne passe à la ligne. Avec beaucoup de
+colonnes, c'est vite atteint.
+
+Trois leviers, du plus au moins efficace :
+
+```bash
+--font-size 7          # le plus direct
+--padding 0.05         # élargit les photos, donc les blocs de noms
+--columns 10           # moins de colonnes, colonnes plus larges
+```
+
+`name_leading` (API seulement) règle l'interligne du bloc, utile quand un nom
+passe sur deux lignes et qu'on veut les resserrer.
 
 Le nombre de lignes par page est calculé à partir de la hauteur disponible et de
 la taille des photos, elle-même déduite du nombre de colonnes. Augmenter

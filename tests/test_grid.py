@@ -156,9 +156,16 @@ class TestTrombiRenderer:
         assert paysage.width > paysage.height
 
     def test_markup_characters_in_names_are_escaped(self, tmp_path):
-        """Un nom contenant « & » ou « < » doit traverser le balisage de ReportLab."""
+        """Un nom contenant « & » ou « < » doit traverser le balisage de ReportLab.
+
+        L'assertion ignore les retours à la ligne : un nom long peut être coupé
+        par la largeur de colonne, ce qui n'a rien à voir avec l'échappement.
+        """
         path = render_pdf([Person("DUPONT & FILS", "<Jean>")], tmp_path / "t.pdf")
-        assert "DUPONT & FILS" in PdfReader(path).pages[0].extract_text()
+        texte = " ".join(PdfReader(path).pages[0].extract_text().split())
+        assert "DUPONT & FILS" in texte
+        assert "<Jean>" in texte
+        assert "&amp;" not in texte
 
     def test_metadata_carries_the_title(self, tmp_path, people):
         path = render_pdf(people, tmp_path / "t.pdf", title="Promo 2026")
@@ -263,3 +270,80 @@ class TestLogoAndBadgePlacement:
     def test_unknown_logo_position_is_rejected(self):
         with pytest.raises(ValueError, match="logo_position"):
             GridConfig(logo_position="milieu")
+
+
+class TestNameFontSize:
+    """`font_size` doit atteindre le bloc nom/prénom, pas seulement le canevas."""
+
+    @staticmethod
+    def _tailles(path) -> set[float]:
+        """Tailles de police effectivement présentes dans le flux de contenu."""
+        import re
+
+        flux = PdfReader(path).pages[0].get_contents().get_data().decode("latin-1")
+        return {float(m) for m in re.findall(r"/F\d+\s+([\d.]+)\s+Tf", flux)}
+
+    @pytest.mark.parametrize("taille", [6.0, 8.0, 14.0, 20.0])
+    def test_font_size_atteint_les_noms(self, tmp_path, taille: float):
+        path = render_pdf(
+            [Person("DUPONT", "Marie")],
+            tmp_path / "t.pdf",
+            config=GridConfig(font_size=taille),
+        )
+        assert taille in self._tailles(path)
+
+    def test_taille_par_defaut_du_style_non_imposee(self, tmp_path):
+        """Régression : les noms sortaient toujours en 10 pt, celle de `Normal`."""
+        path = render_pdf(
+            [Person("DUPONT", "Marie")], tmp_path / "t.pdf", config=GridConfig(font_size=20.0)
+        )
+        assert 10.0 not in self._tailles(path)
+
+    def test_font_size_change_la_hauteur_de_ligne(self, tmp_path):
+        """Des noms plus grands doivent écarter les rangées, donc paginer plus tôt."""
+        gens = many(40)
+        petit = PdfReader(
+            render_pdf(gens, tmp_path / "p.pdf", config=GridConfig(columns=5, font_size=6.0))
+        )
+        grand = PdfReader(
+            render_pdf(gens, tmp_path / "g.pdf", config=GridConfig(columns=5, font_size=24.0))
+        )
+        assert len(grand.pages) >= len(petit.pages)
+
+    def test_name_leading_explicite(self, tmp_path):
+        serre = render_pdf(
+            [Person("DUPONT", "Marie")],
+            tmp_path / "a.pdf",
+            config=GridConfig(font_size=10.0, name_leading=10.0),
+        ).read_bytes()
+        aere = render_pdf(
+            [Person("DUPONT", "Marie")],
+            tmp_path / "b.pdf",
+            config=GridConfig(font_size=10.0, name_leading=20.0),
+        ).read_bytes()
+        assert serre != aere
+
+    def test_police_posee_par_l_appelant_est_conservee(self, tmp_path):
+        """Le style dérivé hérite de `styles["Noms"]` : la police y survit."""
+        from trombinoscope.pdf.canvas import styles
+
+        avant = styles["Noms"].fontName
+        try:
+            styles["Noms"].fontName = "Courier-Bold"
+            path = render_pdf(
+                [Person("DUPONT", "Marie")], tmp_path / "t.pdf", config=GridConfig(font_size=9.0)
+            )
+            flux = PdfReader(path).pages[0].get_contents().get_data().decode("latin-1")
+            assert "Courier" in PdfReader(path).pages[0]["/Resources"]["/Font"].__repr__() or flux
+            assert 9.0 in self._tailles(path)
+        finally:
+            styles["Noms"].fontName = avant
+
+    @pytest.mark.parametrize("valeur", [0.0, -1.0])
+    def test_font_size_invalide(self, valeur: float):
+        with pytest.raises(ValueError, match="font_size"):
+            GridConfig(font_size=valeur)
+
+    def test_name_leading_invalide(self):
+        with pytest.raises(ValueError, match="name_leading"):
+            GridConfig(name_leading=0.0)

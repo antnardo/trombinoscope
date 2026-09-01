@@ -102,7 +102,6 @@ def appliquer_polices() -> None:
     styles["Titre"].fontName = "Helvetica-Bold"
     styles["Titre"].fontSize = 18
     styles["Noms"].fontName = "Helvetica"
-    styles["Noms"].fontSize = 7
     # Interligne volontairement large devant le corps : c'est ce qui aère le bloc
     # nom/prénom sous chaque photo, et ce qui fixe le pas des lignes de la grille.
     styles["Noms"].leading = 12
@@ -118,11 +117,15 @@ def mise_en_page() -> GridConfig:
         margin_right=8.0,
         margin_top=5.0,
         margin_bottom=5.0,
-        font_size=12.0,
+        # Le bloc nom/prénom est en 7 pt, interligne 12 pt.
+        font_size=7.0,
+        name_leading=12.0,
         # En hauteurs de ligne, comme dans le pilote d'origine : une ligne de blanc
         # au-dessus du titre, deux en dessous.
-        title_top=1.0,
-        title_skip=2.0,
+        # Une et deux hauteurs de ligne de 12 pt dans la mise en page d'origine ;
+        # exprimées ici en multiples de font_size, qui vaut 7.
+        title_top=12.0 / 7.0,
+        title_skip=24.0 / 7.0,
         landscape=False,
         center_last_row=True,
         # Les deux séries d'étiquettes dans la gouttière gauche et l'étoile en bas

@@ -367,3 +367,95 @@ class TestBadgeRadius:
     def test_radius_invalide(self, valeur: float):
         with pytest.raises(ValueError, match="badge_radius"):
             GridConfig(badge_radius=valeur)
+
+
+class TestShrinkLongNames:
+    """Seuls les noms trop larges sont réduits ; les autres gardent la taille nominale."""
+
+    COURT = "KAY"
+    LONG = "DUPONT-LAFARGE-DE-LA-TOUR"
+
+    @staticmethod
+    def _tailles(path) -> set[float]:
+        import re
+
+        flux = PdfReader(path).pages[0].get_contents().get_data().decode("latin-1")
+        return {float(m) for m in re.findall(r"/F\d+\s+([\d.]+)\s+Tf", flux)}
+
+    @pytest.fixture
+    def gens(self) -> list[Person]:
+        return [Person(self.COURT, "Alan"), Person(self.LONG, "Marie")]
+
+    def test_le_nom_court_garde_la_taille_nominale(self, tmp_path, gens):
+        path = render_pdf(gens, tmp_path / "t.pdf", config=GridConfig(columns=5, font_size=10.0))
+        assert 10.0 in self._tailles(path)
+
+    def test_le_nom_long_est_reduit(self, tmp_path, gens):
+        path = render_pdf(gens, tmp_path / "t.pdf", config=GridConfig(columns=5, font_size=10.0))
+        reduites = {t for t in self._tailles(path) if t < 10.0}
+        assert reduites, "aucune taille en dessous de la nominale"
+
+    def test_sans_reduction_toutes_les_tailles_sont_egales(self, tmp_path, gens):
+        avec = self._tailles(
+            render_pdf(gens, tmp_path / "a.pdf", config=GridConfig(columns=5, font_size=10.0))
+        )
+        sans = self._tailles(
+            render_pdf(
+                gens,
+                tmp_path / "b.pdf",
+                config=GridConfig(columns=5, font_size=10.0, shrink_long_names=False),
+            )
+        )
+        assert len(avec) > len(sans)
+
+    def test_le_plancher_est_respecte(self, tmp_path):
+        """Un nom démesuré s'arrête au plancher et repasse à la ligne."""
+        path = render_pdf(
+            [Person("A" * 120, "Jean")],
+            tmp_path / "t.pdf",
+            config=GridConfig(columns=8, font_size=10.0, name_shrink_floor=0.6),
+        )
+        assert min(self._tailles(path)) >= 6.0 - 1e-6
+
+    def test_le_plancher_est_configurable(self, tmp_path):
+        path = render_pdf(
+            [Person("A" * 120, "Jean")],
+            tmp_path / "t.pdf",
+            config=GridConfig(columns=8, font_size=10.0, name_shrink_floor=0.3),
+        )
+        assert min(self._tailles(path)) < 6.0
+
+    def test_le_nom_reste_entier_meme_reduit(self, tmp_path, gens):
+        """La réduction ne tronque jamais : le nom est complet, quitte à se replier."""
+        path = render_pdf(gens, tmp_path / "t.pdf", config=GridConfig(columns=5, font_size=10.0))
+        texte = " ".join(PdfReader(path).pages[0].extract_text().split()).replace(" ", "")
+        assert self.LONG.replace("-", "") in texte.replace("-", "")
+
+    def test_la_hauteur_de_rangee_ne_bouge_pas(self, tmp_path):
+        """Réduire ne fait que rétrécir : la pagination reste celle du cas nominal."""
+        longs = [Person("DUPONT-LAFARGE-DE-LA-TOUR", f"P{i}") for i in range(40)]
+        avec = PdfReader(render_pdf(longs, tmp_path / "a.pdf", config=GridConfig(columns=5)))
+        sans = PdfReader(
+            render_pdf(
+                longs, tmp_path / "b.pdf", config=GridConfig(columns=5, shrink_long_names=False)
+            )
+        )
+        assert len(avec.pages) == len(sans.pages)
+
+    def test_prenom_long_declenche_aussi_la_reduction(self, tmp_path):
+        court = self._tailles(
+            render_pdf([Person("KAY", "Al")], tmp_path / "a.pdf", config=GridConfig(columns=6))
+        )
+        long = self._tailles(
+            render_pdf(
+                [Person("KAY", "Marie-Charlotte-Eugenie")],
+                tmp_path / "b.pdf",
+                config=GridConfig(columns=6),
+            )
+        )
+        assert min(long) < min(court)
+
+    @pytest.mark.parametrize("valeur", [0.0, -0.1, 1.5])
+    def test_plancher_invalide(self, valeur: float):
+        with pytest.raises(ValueError, match="name_shrink_floor"):
+            GridConfig(name_shrink_floor=valeur)

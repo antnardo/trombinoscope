@@ -196,6 +196,9 @@ possible — un code `1` ne signifie pas qu'il manque.
 | `logo_margin` | `5.0` | Distance au bord de la zone de contenu, en mm |
 | `logo_offset` | `(0.0, 0.0)` | Décalage fin en mm (`x` vers la droite, `y` vers le haut), pour faire mordre le logo sur la marge |
 | `name_leading` | `None` | Interligne du bloc nom/prénom, en points. `None` → `font_size × 1,25` |
+| `shrink_long_names` | `True` | Réduit la police des seuls noms trop larges pour leur colonne |
+| `name_shrink_floor` | `0.6` | Plancher de cette réduction, en fraction de `font_size` |
+| `badge_radius` | `1.0` | Rayon de l'étoile, en mm |
 | `title_top` | `0.0` | Blanc au-dessus du titre, en **hauteurs de ligne** (multiples de `font_size`) |
 | `title_skip` | `1.0` | Blanc entre le bas du titre et la première rangée, en hauteurs de ligne |
 
@@ -372,20 +375,30 @@ Le détail complet, avec les mesures, est dans [color.md](color.md). En pratique
 
 ### 7.0 Noms trop longs
 
-`font_size` fixe la taille du bloc nom/prénom. Il n'y a pas de réduction
-automatique : un nom plus large que la colonne passe à la ligne. Avec beaucoup de
-colonnes, c'est vite atteint.
+Un nom plus large que sa colonne est **réduit automatiquement**, et lui seul :
+les autres gardent `font_size`, si bien que la planche reste homogène partout où
+elle peut l'être.
 
-Trois leviers, du plus au moins efficace :
+La réduction s'arrête à `name_shrink_floor`, une fraction de `font_size` (0,6 par
+défaut). En dessous, on cesse de réduire et le nom repasse à la ligne — un nom
+illisible serait pire qu'un nom sur deux lignes. Le journal signale alors la
+personne concernée :
+
+```text
+[WARNING] VON HOHENZOLLERN-SIGMARINGEN Jean ne tient pas sur une ligne même
+réduit à 6.0 pt : baissez --font-size, ou élargissez les colonnes
+```
+
+La hauteur des rangées est calculée sur la taille nominale et ne bouge pas : on
+ne fait que rétrécir, donc la pagination est la même qu'un nom soit réduit ou non.
+
+Pour désactiver, `shrink_long_names=False` (API). Les leviers manuels restent :
 
 ```bash
 --font-size 7          # le plus direct
 --padding 0.05         # élargit les photos, donc les blocs de noms
 --columns 10           # moins de colonnes, colonnes plus larges
 ```
-
-`name_leading` (API seulement) règle l'interligne du bloc, utile quand un nom
-passe sur deux lignes et qu'on veut les resserrer.
 
 Le nombre de lignes par page est calculé à partir de la hauteur disponible et de
 la taille des photos, elle-même déduite du nombre de colonnes. Augmenter

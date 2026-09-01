@@ -16,11 +16,13 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
+from reportlab.lib.fonts import ps2tt, tt2ps
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab_layout import PDFMaker, image_spec
 
-from trombinoscope.log import debug, info
+from trombinoscope.log import debug, info, warning
 from trombinoscope.models import GridConfig, Person
 from trombinoscope.pdf.canvas import styles
 
@@ -203,6 +205,50 @@ class TrombiRenderer:
             leading=config.name_leading or config.font_size * 1.25,
         )
 
+    def _fitted_name_style(
+        self, person: Person, width: float, base: ParagraphStyle
+    ) -> ParagraphStyle:
+        """Style du bloc de cette personne, rétréci si son nom déborde.
+
+        Seuls les noms trop larges sont réduits : les autres gardent la taille
+        nominale, de sorte que la planche reste homogène partout où elle peut
+        l'être. La hauteur de rangée, elle, est calculée une fois pour toutes sur
+        la taille nominale — on ne fait que réduire, donc rien ne déborde.
+
+        Sous le plancher, on cesse de réduire et le nom repasse à la ligne : un
+        nom illisible serait pire qu'un nom sur deux lignes.
+        """
+        config = self._config
+        if not config.shrink_long_names:
+            return base
+
+        needed = max(
+            _text_width(person.last_name, base.fontName, base.fontSize, bold=True),
+            _text_width(person.first_name, base.fontName, base.fontSize, bold=False),
+        )
+        # Marge d'un pour cent : une largeur pile égale à la colonne suffit à
+        # déclencher le retour à la ligne.
+        available = width * 0.99
+        if needed <= available or needed == 0:
+            return base
+
+        floor = base.fontSize * config.name_shrink_floor
+        size = max(base.fontSize * available / needed, floor)
+        if size < floor + 1e-6 and needed * (floor / base.fontSize) > available:
+            warning(
+                "%s ne tient pas sur une ligne même réduit à %.1f pt : "
+                "baissez --font-size, ou élargissez les colonnes",
+                person.display_name,
+                floor,
+            )
+        debug("%s : nom réduit à %.1f pt", person.last_name, size)
+        return ParagraphStyle(
+            f"Noms{size:.2f}",
+            parent=base,
+            fontSize=size,
+            leading=size * base.leading / base.fontSize,
+        )
+
     def _portrait_ratio(self, people: Sequence[Person]) -> float:
         """Rapport hauteur/largeur lu sur le premier portrait disponible.
 
@@ -281,7 +327,7 @@ class TrombiRenderer:
 
             doc.draw_paragraph(
                 f"<b>{_escape(cell.person.last_name)}</b><br/>{_escape(cell.person.first_name)}",
-                names,
+                self._fitted_name_style(cell.person, photo_width, names),
                 x=photo_left,
                 y=photo_bottom - 1,
                 width=photo_width,
@@ -358,6 +404,25 @@ class TrombiRenderer:
             doc.draw_regular_polygon(
                 star_x, star_y, radius, vertices=5, leap=2, fill="black", line_join=1
             )
+
+
+def _text_width(text: str, font_name: str, size: float, *, bold: bool) -> float:
+    """Largeur d'une chaîne, en points, dans la variante grasse ou normale.
+
+    Le nom de famille est rendu en gras par le balisage ``<b>`` ; le mesurer avec
+    la police normale le sous-estimerait de plusieurs pour cent, juste assez pour
+    laisser passer un nom qui déborde.
+    """
+    if not text:
+        return 0.0
+    resolved = font_name
+    if bold:
+        try:
+            family, _, italic = ps2tt(font_name)
+            resolved = tt2ps(family, 1, italic)
+        except (ValueError, KeyError):  # pragma: no cover - police sans variante grasse
+            resolved = font_name
+    return stringWidth(text, resolved, size)
 
 
 def _escape(text: str) -> str:

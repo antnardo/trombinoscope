@@ -247,6 +247,14 @@ class GridConfig:
     #: Interligne de ce bloc, en points. ``None`` prend ``font_size * 1.25``.
     #: À augmenter pour aérer, à réduire pour serrer deux lignes très proches.
     name_leading: float | None = None
+    #: Réduit la police des **seuls** noms trop larges pour leur colonne, afin
+    #: qu'ils tiennent sur une ligne. Les autres gardent ``font_size``, si bien
+    #: que la planche reste homogène là où elle peut l'être.
+    shrink_long_names: bool = True
+    #: Plancher de cette réduction, en fraction de ``font_size``. En dessous, on
+    #: cesse de réduire et le nom repasse à la ligne : un nom illisible serait
+    #: pire qu'un nom sur deux lignes.
+    name_shrink_floor: float = 0.6
     #: Blanc entre le bas du titre et la première rangée, en **hauteurs de ligne**
     #: — c'est-à-dire en multiples de ``font_size``, et non en millimètres comme
     #: les marges. Ainsi l'espacement suit la taille du texte quand on la change.
@@ -301,6 +309,8 @@ class GridConfig:
             raise ValueError("font_size doit être strictement positif")
         if self.name_leading is not None and self.name_leading <= 0:
             raise ValueError("name_leading doit être strictement positif")
+        if not 0 < self.name_shrink_floor <= 1:
+            raise ValueError("name_shrink_floor doit être dans ]0, 1]")
         if self.annotation_layout not in ("gutters", "left"):
             raise ValueError("annotation_layout doit valoir 'gutters' ou 'left'")
         corners = ("top-right", "bottom-right", "top-left", "bottom-left")

@@ -5,6 +5,24 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.2.2]
+
+### Ajouté
+
+- **Réduction automatique des noms trop longs.** Un nom plus large que sa colonne
+  voit sa police réduite pour tenir sur une ligne ; les autres gardent
+  `font_size`, si bien que la planche reste homogène partout où elle peut l'être.
+  La mesure tient compte de la variante grasse du nom de famille, qu'une mesure
+  en police normale sous-estimerait de quelques pour cent — assez pour laisser
+  passer un nom qui déborde.
+- `GridConfig.shrink_long_names` pour désactiver, et `name_shrink_floor` pour
+  régler le plancher, exprimé en fraction de `font_size` (0,6 par défaut). Sous
+  ce plancher on cesse de réduire et le nom repasse à la ligne : un nom illisible
+  serait pire qu'un nom sur deux lignes. Le journal nomme alors la personne.
+
+  La hauteur des rangées reste calculée sur la taille nominale : on ne fait que
+  rétrécir, donc la pagination est identique qu'un nom soit réduit ou non.
+
 ## [0.2.1]
 
 ### Modifié
@@ -200,7 +218,8 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.2.1...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.2
 [0.2.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.1
 [0.2.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.0
 [0.1.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.1.1

@@ -125,6 +125,18 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
     grid.add_argument("--font-size", type=float, default=10.0, help="taille des noms, en points")
     grid.add_argument("--landscape", action="store_true")
     grid.add_argument("--no-center-last-row", action="store_true")
+    grid.add_argument(
+        "--no-shrink-names",
+        action="store_true",
+        help="laisse les noms trop larges se replier sur deux lignes au lieu de les réduire",
+    )
+    grid.add_argument(
+        "--shrink-floor",
+        type=float,
+        default=0.6,
+        metavar="FRACTION",
+        help="plancher de cette réduction, en fraction de --font-size",
+    )
     grid.add_argument("--no-tags", action="store_true")
     grid.add_argument("--no-groups", action="store_true")
     grid.add_argument("--no-badges", action="store_true")
@@ -189,6 +201,8 @@ def _options_from(args: argparse.Namespace) -> BuildOptions:
             font_size=args.font_size,
             landscape=args.landscape,
             center_last_row=not args.no_center_last_row,
+            shrink_long_names=not args.no_shrink_names,
+            name_shrink_floor=args.shrink_floor,
             show_tags=not args.no_tags,
             show_groups=not args.no_groups,
             show_badges=not args.no_badges,

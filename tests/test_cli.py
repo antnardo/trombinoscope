@@ -227,3 +227,21 @@ class TestVersion:
             build_parser().parse_args(["--version"])
         assert exit_info.value.code == 0
         assert "trombinoscope" in capsys.readouterr().out
+
+
+class TestShrinkOptions:
+    def test_reduction_active_par_defaut(self):
+        assert _options_from(parse()).grid.shrink_long_names is True
+
+    def test_no_shrink_names_la_desactive(self):
+        assert _options_from(parse("--no-shrink-names")).grid.shrink_long_names is False
+
+    def test_plancher_par_defaut(self):
+        assert _options_from(parse()).grid.name_shrink_floor == 0.6
+
+    def test_plancher_configurable(self):
+        assert _options_from(parse("--shrink-floor", "0.4")).grid.name_shrink_floor == 0.4
+
+    def test_plancher_invalide_est_rejete(self):
+        with pytest.raises(ValueError, match="name_shrink_floor"):
+            _options_from(parse("--shrink-floor", "0"))

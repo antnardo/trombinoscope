@@ -387,17 +387,29 @@ class TestShrinkLongNames:
         return [Person(self.COURT, "Alan"), Person(self.LONG, "Marie")]
 
     def test_le_nom_court_garde_la_taille_nominale(self, tmp_path, gens):
-        path = render_pdf(gens, tmp_path / "t.pdf", config=GridConfig(columns=5, font_size=10.0))
+        path = render_pdf(
+            gens,
+            tmp_path / "t.pdf",
+            config=GridConfig(columns=5, font_size=10.0),
+        )
         assert 10.0 in self._tailles(path)
 
     def test_le_nom_long_est_reduit(self, tmp_path, gens):
-        path = render_pdf(gens, tmp_path / "t.pdf", config=GridConfig(columns=5, font_size=10.0))
+        path = render_pdf(
+            gens,
+            tmp_path / "t.pdf",
+            config=GridConfig(columns=5, font_size=10.0),
+        )
         reduites = {t for t in self._tailles(path) if t < 10.0}
         assert reduites, "aucune taille en dessous de la nominale"
 
     def test_sans_reduction_toutes_les_tailles_sont_egales(self, tmp_path, gens):
         avec = self._tailles(
-            render_pdf(gens, tmp_path / "a.pdf", config=GridConfig(columns=5, font_size=10.0))
+            render_pdf(
+                gens,
+                tmp_path / "a.pdf",
+                config=GridConfig(columns=5, font_size=10.0),
+            )
         )
         sans = self._tailles(
             render_pdf(
@@ -427,7 +439,11 @@ class TestShrinkLongNames:
 
     def test_le_nom_reste_entier_meme_reduit(self, tmp_path, gens):
         """La réduction ne tronque jamais : le nom est complet, quitte à se replier."""
-        path = render_pdf(gens, tmp_path / "t.pdf", config=GridConfig(columns=5, font_size=10.0))
+        path = render_pdf(
+            gens,
+            tmp_path / "t.pdf",
+            config=GridConfig(columns=5, font_size=10.0),
+        )
         texte = " ".join(PdfReader(path).pages[0].extract_text().split()).replace(" ", "")
         assert self.LONG.replace("-", "") in texte.replace("-", "")
 
@@ -459,3 +475,43 @@ class TestShrinkLongNames:
     def test_plancher_invalide(self, valeur: float):
         with pytest.raises(ValueError, match="name_shrink_floor"):
             GridConfig(name_shrink_floor=valeur)
+
+    def test_activee_par_defaut(self, tmp_path, gens):
+        """Le défaut réduit ; il faut demander explicitement le repli sur deux lignes.
+
+        La comparaison porte sur l'ensemble des tailles employées : comparer les
+        octets échouerait sur l'identifiant de document que ReportLab embarque.
+        """
+        defaut = self._tailles(
+            render_pdf(gens, tmp_path / "a.pdf", config=GridConfig(columns=5, font_size=10.0))
+        )
+        sans = self._tailles(
+            render_pdf(
+                gens,
+                tmp_path / "b.pdf",
+                config=GridConfig(columns=5, font_size=10.0, shrink_long_names=False),
+            )
+        )
+        assert defaut != sans
+        assert {t for t in defaut if t < 10.0} - sans, "aucune taille réduite au défaut"
+
+    def test_nom_et_prenom_sont_traites_separement(self, tmp_path):
+        """Un prénom à rallonge ne doit pas rapetisser un nom qui tenait très bien."""
+        path = render_pdf(
+            [Person("LI", "Marie-Charlotte-Eugenie")],
+            tmp_path / "t.pdf",
+            config=GridConfig(columns=6, font_size=10.0),
+        )
+        tailles = self._tailles(path)
+        assert 10.0 in tailles, "le nom court aurait dû rester à la taille nominale"
+        assert {t for t in tailles if t < 10.0}, "le prénom long aurait dû être réduit"
+
+    def test_l_inverse_aussi(self, tmp_path):
+        path = render_pdf(
+            [Person("DUPONT-LAFARGE-DE-LA-TOUR", "Ana")],
+            tmp_path / "t.pdf",
+            config=GridConfig(columns=6, font_size=10.0),
+        )
+        tailles = self._tailles(path)
+        assert 10.0 in tailles, "le prénom court aurait dû rester à la taille nominale"
+        assert {t for t in tailles if t < 10.0}, "le nom long aurait dû être réduit"

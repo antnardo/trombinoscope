@@ -205,43 +205,39 @@ class TrombiRenderer:
             leading=config.name_leading or config.font_size * 1.25,
         )
 
-    def _fitted_name_style(
-        self, person: Person, width: float, base: ParagraphStyle
+    def _fitted_style(
+        self, text: str, width: float, base: ParagraphStyle, *, bold: bool, who: str
     ) -> ParagraphStyle:
-        """Style du bloc de cette personne, rétréci si son nom déborde.
+        """Style d'une seule ligne, rétrécie si elle déborde de sa colonne.
 
-        Seuls les noms trop larges sont réduits : les autres gardent la taille
-        nominale, de sorte que la planche reste homogène partout où elle peut
-        l'être. La hauteur de rangée, elle, est calculée une fois pour toutes sur
-        la taille nominale — on ne fait que réduire, donc rien ne déborde.
+        Nom et prénom sont traités **séparément** : un patronyme à rallonge ne doit
+        pas rapetisser un prénom qui tenait très bien, et réciproquement. Chacun
+        n'est réduit que s'il déborde lui-même.
 
-        Sous le plancher, on cesse de réduire et le nom repasse à la ligne : un
-        nom illisible serait pire qu'un nom sur deux lignes.
+        Sous le plancher, on cesse de réduire et la ligne se replie : illisible
+        serait pire que sur deux lignes.
         """
         config = self._config
-        if not config.shrink_long_names:
+        if not config.shrink_long_names or not text:
             return base
 
-        needed = max(
-            _text_width(person.last_name, base.fontName, base.fontSize, bold=True),
-            _text_width(person.first_name, base.fontName, base.fontSize, bold=False),
-        )
+        needed = _text_width(text, base.fontName, base.fontSize, bold=bold)
         # Marge d'un pour cent : une largeur pile égale à la colonne suffit à
         # déclencher le retour à la ligne.
         available = width * 0.99
-        if needed <= available or needed == 0:
+        if needed <= available:
             return base
 
         floor = base.fontSize * config.name_shrink_floor
         size = max(base.fontSize * available / needed, floor)
-        if size < floor + 1e-6 and needed * (floor / base.fontSize) > available:
+        if needed * (floor / base.fontSize) > available:
             warning(
                 "%s ne tient pas sur une ligne même réduit à %.1f pt : "
                 "baissez --font-size, ou élargissez les colonnes",
-                person.display_name,
+                who,
                 floor,
             )
-        debug("%s : nom réduit à %.1f pt", person.last_name, size)
+        debug("%s : réduit à %.1f pt", who, size)
         return ParagraphStyle(
             f"Noms{size:.2f}",
             parent=base,
@@ -325,19 +321,55 @@ class TrombiRenderer:
                 absolute=True,
             )
 
-            doc.draw_paragraph(
-                f"<b>{_escape(cell.person.last_name)}</b><br/>{_escape(cell.person.first_name)}",
-                self._fitted_name_style(cell.person, photo_width, names),
-                x=photo_left,
-                y=photo_bottom - 1,
-                width=photo_width,
-                absolute=True,
-                valign="top",
-            )
+            self._draw_name_block(doc, cell.person, photo_left, photo_bottom, photo_width, names)
 
             self._draw_annotations(
                 doc, cell.person, photo_left, photo_bottom, photo_width, photo_height
             )
+
+    def _draw_name_block(
+        self,
+        doc: PDFMaker,
+        person: Person,
+        photo_left: float,
+        photo_bottom: float,
+        photo_width: float,
+        names: ParagraphStyle,
+    ) -> None:
+        """Nom en gras puis prénom, chacun à sa propre taille.
+
+        Le prénom se pose une hauteur de ligne **nominale** sous le nom, de sorte
+        que tous les prénoms de la planche restent alignés même quand des noms ont
+        été rétrécis. Si un nom déborde malgré la réduction et se replie, le
+        prénom descend d'autant : mieux vaut un décalage qu'un chevauchement.
+        """
+        top = photo_bottom - 1
+        last = self._fitted_style(
+            person.last_name, photo_width, names, bold=True, who=person.display_name
+        )
+        box = doc.draw_paragraph(
+            f"<b>{_escape(person.last_name)}</b>",
+            last,
+            x=photo_left,
+            y=top,
+            width=photo_width,
+            absolute=True,
+            valign="top",
+        )
+        if not person.first_name:
+            return
+        first = self._fitted_style(
+            person.first_name, photo_width, names, bold=False, who=person.display_name
+        )
+        doc.draw_paragraph(
+            _escape(person.first_name),
+            first,
+            x=photo_left,
+            y=top - max(names.leading, box.height),
+            width=photo_width,
+            absolute=True,
+            valign="top",
+        )
 
     def _draw_annotations(
         self,

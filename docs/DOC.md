@@ -182,6 +182,8 @@ possible — un code `1` ne signifie pas qu'il manque.
 | `--font-size` | `10.0` | Taille du bloc nom/prénom, en points |
 | `--landscape` | — | Page en paysage |
 | `--no-center-last-row` | — | Aligne la dernière ligne à gauche |
+| `--no-shrink-names` | — | Laisse les noms trop larges se replier sur deux lignes |
+| `--shrink-floor` | `0.6` | Plancher de la réduction, en fraction de `--font-size` |
 | `--no-tags`, `--no-groups`, `--no-badges` | — | Masque une série d'annotations |
 
 `GridConfig` expose des réglages sans équivalent en ligne de commande :
@@ -196,8 +198,6 @@ possible — un code `1` ne signifie pas qu'il manque.
 | `logo_margin` | `5.0` | Distance au bord de la zone de contenu, en mm |
 | `logo_offset` | `(0.0, 0.0)` | Décalage fin en mm (`x` vers la droite, `y` vers le haut), pour faire mordre le logo sur la marge |
 | `name_leading` | `None` | Interligne du bloc nom/prénom, en points. `None` → `font_size × 1,25` |
-| `shrink_long_names` | `True` | Réduit la police des seuls noms trop larges pour leur colonne |
-| `name_shrink_floor` | `0.6` | Plancher de cette réduction, en fraction de `font_size` |
 | `badge_radius` | `1.0` | Rayon de l'étoile, en mm |
 | `title_top` | `0.0` | Blanc au-dessus du titre, en **hauteurs de ligne** (multiples de `font_size`) |
 | `title_skip` | `1.0` | Blanc entre le bas du titre et la première rangée, en hauteurs de ligne |
@@ -379,6 +379,22 @@ Un nom plus large que sa colonne est **réduit automatiquement**, et lui seul :
 les autres gardent `font_size`, si bien que la planche reste homogène partout où
 elle peut l'être.
 
+**Nom et prénom sont traités séparément.** Un patronyme à rallonge ne rapetisse
+pas un prénom qui tenait très bien, et réciproquement :
+
+```text
+LI                          10 pt   (inchangé)
+Marie-Charlotte-Eugenie      6,7 pt (réduit)
+
+DUPONT-LAFARGE-DE-LA-TOUR    6 pt   (réduit, au plancher)
+Ana                         10 pt   (inchangé)
+```
+
+Le prénom se pose une hauteur de ligne **nominale** sous le nom, de sorte que
+tous les prénoms de la planche restent alignés même quand des noms ont été
+rétrécis. Si un nom se replie malgré la réduction, le prénom descend d'autant :
+mieux vaut un décalage qu'un chevauchement.
+
 La réduction s'arrête à `name_shrink_floor`, une fraction de `font_size` (0,6 par
 défaut). En dessous, on cesse de réduire et le nom repasse à la ligne — un nom
 illisible serait pire qu'un nom sur deux lignes. Le journal signale alors la
@@ -392,7 +408,12 @@ réduit à 6.0 pt : baissez --font-size, ou élargissez les colonnes
 La hauteur des rangées est calculée sur la taille nominale et ne bouge pas : on
 ne fait que rétrécir, donc la pagination est la même qu'un nom soit réduit ou non.
 
-Pour désactiver, `shrink_long_names=False` (API). Les leviers manuels restent :
+Pour revenir au repli sur deux lignes, `--no-shrink-names`. Attention : la
+hauteur de rangée n'étant réservée que pour deux lignes en tout, un nom replié
+fait déborder son bloc d'une ligne sur la rangée suivante — 12,5 pt à
+`--font-size 10`, dont le `line_skip` n'absorbe qu'une partie.
+
+Les leviers manuels restent :
 
 ```bash
 --font-size 7          # le plus direct

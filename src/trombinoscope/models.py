@@ -248,8 +248,13 @@ class GridConfig:
     #: À augmenter pour aérer, à réduire pour serrer deux lignes très proches.
     name_leading: float | None = None
     #: Réduit la police des **seuls** noms trop larges pour leur colonne, afin
-    #: qu'ils tiennent sur une ligne. Les autres gardent ``font_size``, si bien
-    #: que la planche reste homogène là où elle peut l'être.
+    #: qu'ils tiennent sur une ligne. Les autres gardent ``font_size``. Nom et
+    #: prénom sont traités séparément : un patronyme à rallonge ne rapetisse pas
+    #: un prénom qui tenait très bien.
+    #:
+    #: Activé par défaut : sans lui, un nom trop large se replie sur deux lignes
+    #: et le bloc déborde de sa rangée, la hauteur n'étant réservée que pour deux
+    #: lignes en tout. ``--no-shrink-names`` rétablit ce repli.
     shrink_long_names: bool = True
     #: Plancher de cette réduction, en fraction de ``font_size``. En dessous, on
     #: cesse de réduire et le nom repasse à la ligne : un nom illisible serait

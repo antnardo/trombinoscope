@@ -5,6 +5,27 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.3.0]
+
+### Corrigé
+
+- **Nom et prénom sont désormais réduits séparément.** Ils partageaient un même
+  paragraphe, si bien qu'un prénom à rallonge rapetissait aussi un patronyme qui
+  tenait très bien, et réciproquement. Chacun n'est réduit que s'il déborde
+  lui-même.
+
+  Le prénom se pose une hauteur de ligne **nominale** sous le nom, donc tous les
+  prénoms de la planche restent alignés même quand des noms ont été rétrécis. Si
+  un nom se replie malgré la réduction, le prénom descend d'autant plutôt que de
+  le chevaucher.
+
+### Ajouté
+
+- `--no-shrink-names` et `--shrink-floor` en ligne de commande. La réduction
+  reste active par défaut : sans elle, un nom trop large se replie sur deux
+  lignes et son bloc déborde d'une ligne sur la rangée suivante, la hauteur
+  n'étant réservée que pour deux lignes en tout.
+
 ## [0.2.2]
 
 ### Ajouté
@@ -218,7 +239,8 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.2.2...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.3.0
 [0.2.2]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.2
 [0.2.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.1
 [0.2.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.0

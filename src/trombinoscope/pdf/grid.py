@@ -424,15 +424,10 @@ class TrombiRenderer:
             radius = config.badge_radius * mm
             # Pastille blanche cerclée de noir : l'étoile est posée à cheval sur
             # le coin de la photo, elle doit rester lisible quel que soit le
-            # cliché. Tracée sur le canevas brut, ShapePainter n'ayant pas encore
-            # de cercle.
-            canvas = doc.canvas
-            canvas.saveState()
-            canvas.setFillColorRGB(1, 1, 1)
-            canvas.setStrokeColorRGB(0, 0, 0)
-            canvas.setLineWidth(0.4)
-            canvas.circle(star_x, star_y, radius * 1.5, stroke=1, fill=1)
-            canvas.restoreState()
+            # cliché.
+            doc.draw_circle(
+                star_x, star_y, radius * 1.5, fill="white", stroke="black", line_width=0.4
+            )
             doc.draw_regular_polygon(
                 star_x, star_y, radius, vertices=5, leap=2, fill="black", line_join=1
             )

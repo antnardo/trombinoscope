@@ -5,6 +5,17 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.3.1]
+
+### Modifié
+
+- La pastille blanche sous l'étoile de badge passe par
+  `reportlab_layout.PDFMaker.draw_circle` (nouveau en 1.2.0). C'était le dernier
+  endroit du paquet qui écrivait directement sur le canevas ReportLab ; tout le
+  dessin passe désormais par la couche de mise en page. Rendu identique, vérifié
+  en comparant la vignette de l'étoile au pixel.
+- Dépendance relevée à `reportlab-layout>=1.2.0`.
+
 ## [0.3.0]
 
 ### Corrigé
@@ -239,7 +250,8 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.3.0...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.3.1
 [0.3.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.3.0
 [0.2.2]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.2
 [0.2.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.1

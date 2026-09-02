@@ -245,3 +245,25 @@ class TestShrinkOptions:
     def test_plancher_invalide_est_rejete(self):
         with pytest.raises(ValueError, match="name_shrink_floor"):
             _options_from(parse("--shrink-floor", "0"))
+
+
+class TestColorOptions:
+    def test_bride_de_luminance_par_defaut(self):
+        assert _options_from(parse()).color.max_luminance_shift == 20.0
+
+    def test_zero_leve_la_bride(self):
+        assert _options_from(parse("--max-luminance-shift", "0")).color.max_luminance_shift is None
+
+    def test_valeur_explicite(self):
+        assert _options_from(parse("--max-luminance-shift", "35")).color.max_luminance_shift == 35.0
+
+    def test_no_color_coupe_tout(self):
+        color = _options_from(parse("--no-color")).color
+        assert color.white_balance == "none"
+        assert color.harmonize_batch is False
+        assert color.auto_levels_clip is None
+
+    def test_no_color_prime_sur_les_autres_options(self):
+        """Combiné à un réglage contraire, `--no-color` doit l'emporter."""
+        color = _options_from(parse("--no-color", "--white-balance", "grayworld")).color
+        assert color.white_balance == "none"

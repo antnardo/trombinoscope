@@ -17,7 +17,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from trombinoscope.log import debug, info
+from trombinoscope.log import debug, info, warning
 
 #: Extensions lues nativement par OpenCV.
 IMAGE_SUFFIXES: tuple[str, ...] = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
@@ -67,7 +67,30 @@ def find_images(folder: Path | str, *, suffixes: Sequence[str] | None = None) ->
     found.sort(key=lambda p: p.name.casefold())
     unique = _deduplicate(found)
     info("%d image(s) trouvée(s) dans %s", len(unique), folder)
+    _warn_unreadable_heif(folder, allowed)
     return unique
+
+
+def _warn_unreadable_heif(folder: Path, allowed: set[str]) -> None:
+    """Signale les HEIC écartés faute de ``pillow-heif``.
+
+    Sans cet avertissement, un dossier de photos d'iPhone donne « 0 image
+    trouvée » sans le moindre indice : les fichiers sont bien là, seule la
+    dépendance de décodage manque.
+    """
+    if HEIF_SUFFIXES[0] in allowed:
+        return
+    ignores = [
+        entry
+        for entry in folder.iterdir()
+        if entry.is_file() and entry.suffix.lower() in HEIF_SUFFIXES
+    ]
+    if ignores:
+        warning(
+            "%d fichier(s) %s ignoré(s) : installez « pip install 'trombinoscope[heic]' »",
+            len(ignores),
+            " et ".join(sorted({e.suffix.lower() for e in ignores})),
+        )
 
 
 def _deduplicate(paths: Iterable[Path]) -> list[Path]:

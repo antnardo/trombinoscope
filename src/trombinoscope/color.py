@@ -471,9 +471,28 @@ class BatchColorHarmonizer:
         if self._config.harmonize_batch:
             reference = self.reference_luminance
             if reference is not None:
-                result = self._luminance.transform(result, reference, mask)
+                result = self._luminance.transform(
+                    result, self._target(result, reference, mask), mask
+                )
 
         return result
+
+    def _target(self, image: np.ndarray, reference: float, mask: np.ndarray | None) -> float:
+        """Luminance visée, bridée par ``max_luminance_shift``.
+
+        Une photo nettement plus sombre ou plus claire que le lot est une valeur
+        aberrante, pas un écart à rattraper coûte que coûte : la tirer jusqu'à la
+        médiane lui fait perdre son contraste, puisque le gamma qui la déplace
+        comprime la plage d'un côté. On la rapproche donc du lot sans l'y forcer.
+        """
+        cap = self._config.max_luminance_shift
+        if cap is None:
+            return reference
+        current = median_luminance(image, mask)
+        target = float(np.clip(reference, current - cap, current + cap))
+        if target != reference:
+            debug("luminance visée bridée : %.0f au lieu de %.0f", target, reference)
+        return target
 
     def reset(self) -> None:
         self._samples.clear()

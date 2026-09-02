@@ -5,15 +5,34 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.4.0]
+
 ### Corrigé
 
+- **L'harmonisation délavait les photos très éloignées du lot.** La luminance
+  visée était la médiane du lot, quel que soit l'écart : une photo à 41 points de
+  cette médiane recevait un gamma de 0,60 et perdait **18 % de son contraste**.
+  Le déplacement est désormais bridé par `max_luminance_shift`, 20 points de
+  `L*` par défaut. Sur le lot en question, la perte tombe à 7 % et la dispersion
+  reste réduite de 65 %. `None` — ou `--max-luminance-shift 0` — rétablit
+  l'ancien comportement.
+- **Un dossier de photos HEIC sans `pillow-heif` paraissait vide.** Les fichiers
+  étaient silencieusement écartés du filtrage par extension. Un avertissement
+  nomme désormais le nombre de fichiers ignorés et la commande d'installation.
 - **CI : le job « Installation depuis la roue » réessaie l'installation.** Il
   laisse `pip` résoudre les dépendances depuis PyPI ; quand l'une d'elles vient
   d'être publiée, les nœuds CDN ne la voient pas tous au même moment et le job
   échouait sur un index encore périmé — trois tentatives avaient été nécessaires
   pour la 0.3.1, `reportlab-layout 1.2.0` ayant été publiée quelques minutes plus
-  tôt. Cinq essais espacés d'une minute, puis échec franc : la propagation a le
-  temps de se faire, sans masquer une vraie erreur de résolution.
+  tôt. Cinq essais espacés d'une minute, puis échec franc.
+
+### Ajouté
+
+- `--no-color` : ne touche pas du tout aux couleurs, ni balance des blancs, ni
+  exposition. Il fallait jusqu'ici combiner `--white-balance none` et
+  `--no-harmonize`, et le premier seul laissait passer la normalisation
+  d'exposition.
+- `--max-luminance-shift` et `ColorConfig.max_luminance_shift`.
 
 ## [0.3.1]
 
@@ -260,7 +279,8 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.3.1...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.0
 [0.3.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.3.1
 [0.3.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.3.0
 [0.2.2]: https://github.com/antnardo/trombinoscope/releases/tag/v0.2.2

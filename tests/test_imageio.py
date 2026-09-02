@@ -148,3 +148,31 @@ class TestDrawDetections:
     def test_no_detection_leaves_the_image_alone(self):
         image = make_photo(100, 120)
         assert np.array_equal(draw_detections(image, []), image)
+
+
+class TestHeifWarning:
+    """Un dossier de HEIC sans pillow-heif doit dire pourquoi il paraît vide."""
+
+    def test_avertit_quand_les_heic_sont_illisibles(self, folder, monkeypatch, caplog):
+        import trombinoscope.imageio as module
+
+        (folder / "IMG_1.HEIC").write_bytes(b"x")
+        (folder / "IMG_2.heic").write_bytes(b"x")
+        put(folder, "a.jpg")
+        monkeypatch.setattr(module, "supported_suffixes", lambda **_: module.IMAGE_SUFFIXES)
+
+        with caplog.at_level("WARNING", logger="trombinoscope"):
+            trouvees = find_images(folder)
+
+        assert [p.name for p in trouvees] == ["a.jpg"]
+        assert "trombinoscope[heic]" in caplog.text
+        assert "2 fichier(s)" in caplog.text
+
+    def test_pas_d_avertissement_sans_heic(self, folder, monkeypatch, caplog):
+        import trombinoscope.imageio as module
+
+        put(folder, "a.jpg")
+        monkeypatch.setattr(module, "supported_suffixes", lambda **_: module.IMAGE_SUFFIXES)
+        with caplog.at_level("WARNING", logger="trombinoscope"):
+            find_images(folder)
+        assert "heic" not in caplog.text.lower()

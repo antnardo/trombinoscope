@@ -112,6 +112,22 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
     )
     color.add_argument("--max-gain", type=float, default=2.0)
     color.add_argument(
+        "--max-luminance-shift",
+        type=float,
+        default=20.0,
+        metavar="POINTS",
+        help=(
+            "déplacement maximal de la luminance d'un portrait, en points de L* "
+            "(0 pour lever la bride). Protège les photos très sombres ou très "
+            "claires, que tirer jusqu'à la médiane du lot délave"
+        ),
+    )
+    color.add_argument(
+        "--no-color",
+        action="store_true",
+        help="ne touche pas du tout aux couleurs : ni balance des blancs, ni exposition",
+    )
+    color.add_argument(
         "--strength",
         type=float,
         default=1.0,
@@ -169,6 +185,21 @@ def _parse_picks(entries: list[str]) -> dict[str, int]:
     return picks
 
 
+def _color_from(args: argparse.Namespace) -> ColorConfig:
+    """Configuration colorimétrique. ``--no-color`` court-circuite tout le reste."""
+    if args.no_color:
+        return ColorConfig(white_balance="none", auto_levels_clip=None, harmonize_batch=False)
+    return ColorConfig(
+        white_balance=args.white_balance,
+        minkowski_p=args.minkowski_p,
+        auto_levels_clip=args.auto_levels if args.auto_levels > 0 else None,
+        harmonize_batch=not args.no_harmonize,
+        max_gain=args.max_gain,
+        strength=args.strength,
+        max_luminance_shift=(args.max_luminance_shift if args.max_luminance_shift > 0 else None),
+    )
+
+
 def _options_from(args: argparse.Namespace) -> BuildOptions:
     return BuildOptions(
         title=args.title,
@@ -186,14 +217,7 @@ def _options_from(args: argparse.Namespace) -> BuildOptions:
             width=args.portrait_width,
             align_eyes=args.align_eyes,
         ),
-        color=ColorConfig(
-            white_balance=args.white_balance,
-            minkowski_p=args.minkowski_p,
-            auto_levels_clip=args.auto_levels if args.auto_levels > 0 else None,
-            harmonize_batch=not args.no_harmonize,
-            max_gain=args.max_gain,
-            strength=args.strength,
-        ),
+        color=_color_from(args),
         grid=GridConfig(
             columns=args.columns,
             column_padding=args.padding,

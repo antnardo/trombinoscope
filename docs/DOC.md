@@ -171,6 +171,8 @@ possible — un code `1` ne signifie pas qu'il manque.
 | `--max-gain` | `2.0` | Gain maximal par canal |
 | `--auto-levels PCT` | `0` (désactivé) | Étalement d'histogramme |
 | `--no-harmonize` | — | Corrige chaque photo isolément |
+| `--max-luminance-shift` | `20` | Déplacement maximal de l'exposition, en points de `L*` (`0` lève la bride) |
+| `--no-color` | — | Ne touche pas du tout aux couleurs |
 
 #### Mise en page
 
@@ -370,6 +372,26 @@ Le détail complet, avec les mesures, est dans [color.md](color.md). En pratique
 - **`--no-harmonize`** corrige chaque photo vers le gris neutre indépendamment.
   Meilleure neutralité par image, mais aucune cohérence d'exposition entre les
   photos.
+- **`--no-color`** ne touche à rien : ni balance des blancs, ni exposition. C'est
+  le seul réglage qui garantisse des portraits identiques aux photos d'origine.
+
+### 6.1 La bride sur l'exposition
+
+Une photo nettement plus sombre ou plus claire que le lot est une valeur
+aberrante, pas un simple écart à rattraper. La tirer jusqu'à la médiane lui coûte
+son contraste : le gamma qui la déplace comprime la plage d'un côté.
+
+`--max-luminance-shift` limite ce déplacement à 20 points de `L*` par défaut.
+Mesuré sur un lot de 39 portraits dont un à 41 points de la médiane :
+
+| bride | contraste de la photo aberrante | dispersion du lot |
+| --- | --- | --- |
+| aucune | 35,1 (−18 %) | 1,00 |
+| **20 points** | **39,8 (−7 %)** | **4,74** |
+| `--no-color` | 43,0 (intact) | 13,45 |
+
+La bride garde l'essentiel de l'homogénéisation en divisant les dégâts par
+trois. `--max-luminance-shift 0` la lève, `--max-luminance-shift 10` la resserre.
 
 ## 7. La mise en page
 

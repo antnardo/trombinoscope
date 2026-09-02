@@ -10,6 +10,7 @@ Trois familles :
   resserre la dispersion colorimétrique d'un lot.
 """
 
+import cv2
 import numpy as np
 import pytest
 
@@ -267,13 +268,18 @@ class TestBatchColorHarmonizer:
         assert after < before * 0.7, f"dispersion chromatique {before:.4f} → {after:.4f}"
 
     def test_reduces_luminance_spread(self):
+        """Bride levée : on teste ici l'alignement sur le lot, pas sa modération.
+
+        Le défaut brime volontairement le déplacement des photos aberrantes ;
+        c'est l'objet de :class:`TestMaxLuminanceShift`.
+        """
         base = make_photo(width=240, height=320)
         box = default_face_box(240, 320)
         batch = [
             np.clip(base.astype(np.float32) * factor, 0, 255).astype(np.uint8)
             for factor in (0.6, 0.85, 1.0, 1.2)
         ]
-        harmonizer = BatchColorHarmonizer(ColorConfig())
+        harmonizer = BatchColorHarmonizer(ColorConfig(max_luminance_shift=None))
         for image in batch:
             harmonizer.measure(image, box)
         corrected = [harmonizer.transform(image, box) for image in batch]
@@ -381,3 +387,78 @@ class TestFaceMask:
     def test_box_outside_image_is_clipped(self):
         mask = face_mask((50, 50, 3), Box(40, 40, 200, 200))
         assert mask.shape == (50, 50)
+
+
+class TestMaxLuminanceShift:
+    """Une photo très éloignée du lot ne doit pas être tirée jusqu'à la médiane.
+
+    L'y forcer lui coûte son contraste : le gamma qui la déplace comprime la
+    plage d'un côté. Mesuré sur un lot réel de 39 portraits, la contrainte à
+    20 points ramène la perte de contraste de 18 % à 7 %.
+    """
+
+    @pytest.fixture
+    def lot(self) -> list[np.ndarray]:
+        """Cinq portraits groupés, plus un nettement plus sombre.
+
+        Le visage est texturé : sur l'ovale uniforme de ``make_photo`` il n'y
+        aurait aucun contraste à perdre, et le test ne mesurerait rien.
+        """
+        rng = np.random.default_rng(3)
+        base = make_photo(width=200, height=260)
+        bruit = rng.normal(0, 22, base.shape).astype(np.float32)
+        base = np.clip(base.astype(np.float32) + bruit, 0, 255).astype(np.uint8)
+        clairs = [
+            np.clip(base.astype(np.float32) * f, 0, 255).astype(np.uint8)
+            for f in (0.98, 1.0, 1.02, 1.0, 0.99)
+        ]
+        sombre = np.clip(base.astype(np.float32) * 0.45, 0, 255).astype(np.uint8)
+        return [*clairs, sombre]
+
+    @staticmethod
+    def _corriger(lot, config, box):
+        harmoniseur = BatchColorHarmonizer(config)
+        for image in lot:
+            harmoniseur.measure(image, box)
+        return [harmoniseur.transform(image, box) for image in lot]
+
+    def test_la_bride_limite_le_deplacement(self, lot):
+        box = default_face_box(200, 260)
+        mask = face_mask(lot[-1].shape, box)
+        avant = median_luminance(lot[-1], mask)
+        bride = self._corriger(lot, ColorConfig(max_luminance_shift=15.0), box)[-1]
+        assert abs(median_luminance(bride, mask) - avant) <= 15.0 + 3.0
+
+    def test_sans_bride_la_photo_rejoint_la_mediane(self, lot):
+        box = default_face_box(200, 260)
+        mask = face_mask(lot[-1].shape, box)
+        avant = median_luminance(lot[-1], mask)
+        libre = self._corriger(lot, ColorConfig(max_luminance_shift=None), box)[-1]
+        assert abs(median_luminance(libre, mask) - avant) > 15.0
+
+    def test_la_bride_preserve_le_contraste(self, lot):
+        """L'objectif de la bride : garder du modelé sur la photo aberrante."""
+        box = default_face_box(200, 260)
+        mask = face_mask(lot[-1].shape, box)
+
+        def contraste(image):
+            return float(cv2.cvtColor(image, cv2.COLOR_BGR2LAB)[:, :, 0][mask].std())
+
+        libre = self._corriger(lot, ColorConfig(max_luminance_shift=None), box)[-1]
+        bride = self._corriger(lot, ColorConfig(max_luminance_shift=15.0), box)[-1]
+        assert contraste(bride) > contraste(libre)
+
+    def test_les_photos_proches_ne_sont_pas_affectees(self, lot):
+        """La bride ne doit rien changer à celles qui étaient déjà dans le lot."""
+        box = default_face_box(200, 260)
+        libre = self._corriger(lot, ColorConfig(max_luminance_shift=None), box)[1]
+        bride = self._corriger(lot, ColorConfig(max_luminance_shift=20.0), box)[1]
+        assert np.array_equal(libre, bride)
+
+    @pytest.mark.parametrize("valeur", [0.0, -5.0])
+    def test_bride_invalide(self, valeur: float):
+        with pytest.raises(ValueError, match="max_luminance_shift"):
+            ColorConfig(max_luminance_shift=valeur)
+
+    def test_none_est_accepte(self):
+        assert ColorConfig(max_luminance_shift=None).max_luminance_shift is None

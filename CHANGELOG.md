@@ -5,6 +5,20 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.4.2]
+
+### Ajouté
+
+- `ColorConfig.disabled()` et la constante `NO_COLOR` : l'équivalent Python de
+  `--no-color`, en un seul terme. Il fallait jusqu'ici composer
+  `white_balance="none", harmonize_batch=False` de tête, et se souvenir que
+  `harmonize_batch` porte aussi la normalisation d'exposition — l'oubli qui
+  laisse passer la correction qu'on croyait avoir coupée.
+
+  `NO_COLOR` est une instance partagée : `ColorConfig` est gelée, donc sans
+  risque. Un test vérifie que les images ressortent identiques, un autre que
+  couper la seule balance des blancs ne suffit pas.
+
 ## [0.4.1]
 
 ### Corrigé
@@ -299,7 +313,8 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.4.1...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.2
 [0.4.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.1
 [0.4.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.0
 [0.3.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.3.1

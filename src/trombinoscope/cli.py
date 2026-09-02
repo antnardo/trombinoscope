@@ -23,7 +23,7 @@ from trombinoscope.imageio import (
     write_image,
 )
 from trombinoscope.log import configure, error, info, set_interactive
-from trombinoscope.models import ColorConfig, FramingConfig, GridConfig
+from trombinoscope.models import NO_COLOR, ColorConfig, FramingConfig, GridConfig
 from trombinoscope.pipeline import BuildOptions, TrombinoscopeBuilder
 from trombinoscope.roster import write_template
 
@@ -279,7 +279,7 @@ def _parse_picks(entries: list[str]) -> dict[str, int]:
 def _color_from(args: argparse.Namespace) -> ColorConfig:
     """Configuration colorimétrique. ``--no-color`` court-circuite tout le reste."""
     if args.no_color:
-        return ColorConfig(white_balance="none", auto_levels_clip=None, harmonize_batch=False)
+        return NO_COLOR
     return ColorConfig(
         white_balance=args.white_balance,
         minkowski_p=args.minkowski_p,

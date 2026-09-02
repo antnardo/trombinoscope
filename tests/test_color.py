@@ -28,7 +28,7 @@ from trombinoscope.color import (
     median_luminance,
     srgb_to_linear,
 )
-from trombinoscope.models import Box, ColorConfig
+from trombinoscope.models import NO_COLOR, Box, ColorConfig
 
 from .conftest import apply_cast, default_face_box, make_photo
 
@@ -462,3 +462,40 @@ class TestMaxLuminanceShift:
 
     def test_none_est_accepte(self):
         assert ColorConfig(max_luminance_shift=None).max_luminance_shift is None
+
+
+class TestColorConfigDisabled:
+    """`disabled()` et `NO_COLOR` doivent vraiment ne rien faire."""
+
+    @pytest.fixture
+    def lot(self) -> list[np.ndarray]:
+        rng = np.random.default_rng(7)
+        return [rng.integers(30, 230, (70, 60, 3), dtype=np.uint8) for _ in range(4)]
+
+    def test_les_images_ressortent_identiques(self, lot):
+        harmoniseur = BatchColorHarmonizer(ColorConfig.disabled())
+        for image in lot:
+            harmoniseur.measure(image, None)
+        assert all(np.array_equal(harmoniseur.transform(i, None), i) for i in lot)
+
+    def test_no_color_est_la_meme_chose(self):
+        assert ColorConfig.disabled() == NO_COLOR
+
+    def test_les_trois_traitements_sont_coupes(self):
+        """Notamment `harmonize_batch`, qui porte aussi la normalisation d'exposition."""
+        config = ColorConfig.disabled()
+        assert config.white_balance == "none"
+        assert config.harmonize_batch is False
+        assert config.auto_levels_clip is None
+
+    def test_couper_la_seule_balance_ne_suffit_pas(self, lot):
+        """Le piège documenté : `white_balance="none"` laisse passer l'exposition."""
+        harmoniseur = BatchColorHarmonizer(ColorConfig(white_balance="none"))
+        for image in lot:
+            harmoniseur.measure(image, None)
+        assert not all(np.array_equal(harmoniseur.transform(i, None), i) for i in lot)
+
+    def test_no_color_est_exporte_a_la_racine(self):
+        import trombinoscope
+
+        assert trombinoscope.NO_COLOR is NO_COLOR

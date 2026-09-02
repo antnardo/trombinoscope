@@ -390,19 +390,24 @@ traitement.
 | `--max-luminance-shift 10` | `max_luminance_shift=10.0` |
 | `--max-luminance-shift 0` | `max_luminance_shift=None` |
 | `--auto-levels 0.5` | `auto_levels_clip=0.5` |
-| **`--no-color`** | **`white_balance="none", harmonize_batch=False`** |
+| **`--no-color`** | **`NO_COLOR`, ou `ColorConfig.disabled()`** |
 
 ```python
-from trombinoscope import BuildOptions, ColorConfig, TrombinoscopeBuilder
+from trombinoscope import NO_COLOR, BuildOptions, TrombinoscopeBuilder
 
 # aucune correction : les portraits sortent tels quels
-options = BuildOptions(color=ColorConfig(white_balance="none", harmonize_batch=False))
-TrombinoscopeBuilder(options).build("photos/", "classe.csv", "trombi.pdf")
+TrombinoscopeBuilder(BuildOptions(color=NO_COLOR)).build(
+    "photos/", "classe.csv", "trombi.pdf"
+)
 ```
 
-`harmonize_batch` est celui qu'on oublie : **`white_balance="none"` seul laisse
-passer la normalisation d'exposition**, qui est souvent ce qu'on cherchait à
-couper. `auto_levels_clip=None` est déjà le défaut, inutile de le préciser.
+`NO_COLOR` est une instance partagée — `ColorConfig` est gelée, donc c'est sans
+risque — et `ColorConfig.disabled()` en construit une équivalente. Les deux
+valent `white_balance="none", harmonize_batch=False`.
+
+Ne coupez pas les champs à la main : **`white_balance="none"` seul laisse passer
+la normalisation d'exposition**, portée par `harmonize_batch`, et c'est souvent
+elle qu'on cherchait à arrêter.
 
 ### 6.1 La bride sur l'exposition
 

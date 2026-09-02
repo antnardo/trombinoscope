@@ -225,6 +225,16 @@ class ColorConfig:
     #: est mal estimé et que la correction pleine puissance colore à tort.
     strength: float = 1.0
 
+    @classmethod
+    def disabled(cls) -> "ColorConfig":
+        """Configuration qui ne touche à rien : les portraits sortent tels quels.
+
+        C'est l'équivalent Python de ``--no-color``. Couper la seule balance des
+        blancs ne suffit pas : ``harmonize_batch`` porte aussi la normalisation
+        d'exposition, et c'est l'oubli classique.
+        """
+        return cls(white_balance="none", harmonize_batch=False, auto_levels_clip=None)
+
     def __post_init__(self) -> None:
         if not 0.0 <= self.strength <= 1.0:
             raise ValueError("strength doit être dans [0, 1]")
@@ -334,6 +344,11 @@ class GridConfig:
             raise ValueError(f"badge_corner doit être l'un de {corners}")
         if self.logo_position not in corners:
             raise ValueError(f"logo_position doit être l'un de {corners}")
+
+
+#: Configuration colorimétrique inerte, équivalent de ``--no-color``.
+#: ``ColorConfig`` est gelée, donc partager une instance unique est sans risque.
+NO_COLOR = ColorConfig.disabled()
 
 
 @dataclass(slots=True)

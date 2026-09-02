@@ -33,6 +33,7 @@ from trombinoscope.framing import PortraitFramer
 from trombinoscope.imageio import find_images, open_with_system_viewer, read_image, write_image
 from trombinoscope.log import configure, set_interactive
 from trombinoscope.models import (
+    NO_COLOR,
     Box,
     BuildReport,
     ColorConfig,
@@ -52,9 +53,10 @@ from trombinoscope.roster import (
     write_template,
 )
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 __all__ = [
+    "NO_COLOR",
     "AutoLevels",
     "BatchColorHarmonizer",
     "Box",

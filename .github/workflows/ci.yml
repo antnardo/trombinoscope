@@ -136,8 +136,25 @@ jobs:
           restore-keys: pip-smoke-${{ runner.os }}-
       - name: Installer et lancer la CLI
         shell: bash
+        # `pip` résout les dépendances depuis PyPI. Quand l'une d'elles vient
+        # d'être publiée — c'est le cas quand on relève reportlab-layout dans la
+        # foulée de sa propre release — les nœuds CDN de PyPI ne la voient pas
+        # tous en même temps, et l'installation échoue sur un index encore
+        # périmé. Ce n'est pas un faux positif : la release n'est effectivement
+        # pas installable partout à cet instant. On laisse donc le temps à la
+        # propagation plutôt que de masquer la résolution.
         run: |
-          python -m pip install dist/*.whl
+          for essai in 1 2 3 4 5; do
+            if python -m pip install dist/*.whl; then
+              break
+            fi
+            if [ "$essai" = 5 ]; then
+              echo "::error::installation impossible après 5 essais sur 4 minutes"
+              exit 1
+            fi
+            echo "::warning::essai $essai échoué, index PyPI peut-être en retard ; nouvelle tentative dans 60 s"
+            sleep 60
+          done
           trombinoscope --version
           trombinoscope template classe.csv
           test -s classe.csv

@@ -5,6 +5,16 @@ versionnage sémantique.
 
 ## [Non publié]
 
+### Corrigé
+
+- **CI : le job « Installation depuis la roue » réessaie l'installation.** Il
+  laisse `pip` résoudre les dépendances depuis PyPI ; quand l'une d'elles vient
+  d'être publiée, les nœuds CDN ne la voient pas tous au même moment et le job
+  échouait sur un index encore périmé — trois tentatives avaient été nécessaires
+  pour la 0.3.1, `reportlab-layout 1.2.0` ayant été publiée quelques minutes plus
+  tôt. Cinq essais espacés d'une minute, puis échec franc : la propagation a le
+  temps de se faire, sans masquer une vraie erreur de résolution.
+
 ## [0.3.1]
 
 ### Modifié

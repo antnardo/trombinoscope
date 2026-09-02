@@ -267,3 +267,37 @@ class TestColorOptions:
         """Combiné à un réglage contraire, `--no-color` doit l'emporter."""
         color = _options_from(parse("--no-color", "--white-balance", "grayworld")).color
         assert color.white_balance == "none"
+
+
+class TestHelpCompleteness:
+    """Toute option doit s'expliquer d'elle-même : `--help` est la seule doc à portée."""
+
+    @staticmethod
+    def _actions(nom: str):
+        sub = next(
+            a for a in build_parser()._actions if a.__class__.__name__ == "_SubParsersAction"
+        )
+        return [a for a in sub.choices[nom]._actions if a.dest != "help"]
+
+    @pytest.mark.parametrize("commande", ["build", "inspect", "template"])
+    def test_toute_option_a_une_aide(self, commande: str):
+        muettes = [
+            ", ".join(a.option_strings) or a.dest for a in self._actions(commande) if not a.help
+        ]
+        assert not muettes, f"sans aide dans « {commande} » : {muettes}"
+
+    @pytest.mark.parametrize("commande", ["build", "inspect", "template"])
+    def test_les_aides_sont_des_phrases(self, commande: str):
+        """Une aide d'un seul mot ne renseigne personne."""
+        trop_courtes = [
+            (", ".join(a.option_strings) or a.dest, a.help)
+            for a in self._actions(commande)
+            if a.help and len(a.help.split()) < 3
+        ]
+        assert not trop_courtes, trop_courtes
+
+    def test_no_color_dit_ce_qu_il_coupe(self):
+        """Le piège de --white-balance none doit être signalé là où on le lit."""
+        aides = {", ".join(a.option_strings): a.help for a in self._actions("build") if a.help}
+        assert "exposition" in aides["--no-color"]
+        assert "--no-color" in aides["--white-balance"]

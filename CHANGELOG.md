@@ -5,6 +5,26 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.4.1]
+
+### Corrigé
+
+- **18 options de la ligne de commande sur 38 n'avaient aucune aide**, et deux
+  autres se réduisaient à deux mots. Toutes en ont désormais une, reprenant la
+  substance des docstrings de `GridConfig`, `FramingConfig` et `ColorConfig` :
+  `--help` est la seule documentation à portée de main quand on tape une
+  commande. Deux tests l'exigent maintenant, dont un qui refuse les aides de
+  moins de trois mots.
+- L'aide de `--white-balance` signale que `none` ne coupe **que** la teinte, et
+  renvoie vers `--no-color` — c'est le piège qui délavait les photos malgré une
+  balance des blancs désactivée.
+
+### Ajouté
+
+- Table d'équivalence ligne de commande ↔ `ColorConfig` dans la documentation.
+  Il n'existe pas de champ `no_color` : c'est la combinaison
+  `white_balance="none", harmonize_batch=False`, et rien ne le disait.
+
 ## [0.4.0]
 
 ### Corrigé
@@ -279,7 +299,8 @@ commente que ce qu'il fait.
 - Le cache `photos.pkl` écrit dans le dossier de l'utilisateur.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
-[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.4.0...HEAD
+[Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.1
 [0.4.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.0
 [0.3.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.3.1
 [0.3.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.3.0

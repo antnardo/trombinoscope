@@ -50,9 +50,11 @@ def build_parser() -> argparse.ArgumentParser:
 def _add_build(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("photos", type=Path, help="dossier contenant les photos")
     parser.add_argument("roster", type=Path, help="CSV ou JSON de la liste des personnes")
-    parser.add_argument("-o", "--output", type=Path, default=Path("trombinoscope.pdf"))
-    parser.add_argument("--title", default="Trombinoscope")
-    parser.add_argument("--subtitle", default="")
+    parser.add_argument(
+        "-o", "--output", type=Path, default=Path("trombinoscope.pdf"), help="chemin du PDF produit"
+    )
+    parser.add_argument("--title", default="Trombinoscope", help="titre en tête de chaque page")
+    parser.add_argument("--subtitle", default="", help="ligne sous le titre")
     parser.add_argument(
         "--absent",
         nargs="*",
@@ -60,7 +62,9 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
         metavar="NOM",
         help="noms présents dans la liste mais sans photo",
     )
-    parser.add_argument("--logo", type=Path, default=None)
+    parser.add_argument(
+        "--logo", type=Path, default=None, help="image posée dans un coin de la page"
+    )
     parser.add_argument(
         "--portraits", type=Path, default=None, help="dossier des portraits produits"
     )
@@ -73,7 +77,16 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
     )
 
     detection = parser.add_argument_group("détection")
-    detection.add_argument("--backend", choices=("yunet", "haar"), default="yunet")
+    detection.add_argument(
+        "--backend",
+        choices=("yunet", "haar"),
+        default="yunet",
+        help=(
+            "yunet : modèle ONNX livré avec le paquet, 227 Ko, avec points "
+            "caractéristiques. haar : repli sans modèle, moins précis, et retiré "
+            "d'OpenCV 5"
+        ),
+    )
     detection.add_argument("--confidence", type=float, default=0.6, help="seuil de détection")
     detection.add_argument(
         "--pick",
@@ -84,17 +97,50 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
     )
 
     framing = parser.add_argument_group("cadrage")
-    framing.add_argument("--face-ratio", type=float, default=0.55)
-    framing.add_argument("--aspect-ratio", type=float, default=4 / 3)
-    framing.add_argument("--face-y", type=float, default=0.5)
-    framing.add_argument("--portrait-width", type=int, default=300)
+    framing.add_argument(
+        "--face-ratio",
+        type=float,
+        default=0.55,
+        help=(
+            "fraction de la largeur du cadre occupée par le visage. Constante pour "
+            "tout le lot, c'est elle qui rend les portraits comparables quelle que "
+            "soit la distance de prise de vue. 0,35 plan large, 0,70 photo d'identité"
+        ),
+    )
+    framing.add_argument(
+        "--aspect-ratio", type=float, default=4 / 3, help="hauteur / largeur du portrait"
+    )
+    framing.add_argument(
+        "--face-y",
+        type=float,
+        default=0.5,
+        help="position verticale du visage dans le cadre : 0 en haut, 1 en bas",
+    )
+    framing.add_argument(
+        "--portrait-width", type=int, default=300, help="largeur du portrait produit, en pixels"
+    )
     framing.add_argument(
         "--align-eyes", action="store_true", help="redresse la ligne des yeux (yunet seulement)"
     )
 
     color = parser.add_argument_group("couleur")
-    color.add_argument("--white-balance", choices=WHITE_BALANCE_CHOICES, default="shades-of-gray")
-    color.add_argument("--minkowski-p", type=float, default=6.0)
+    color.add_argument(
+        "--white-balance",
+        choices=WHITE_BALANCE_CHOICES,
+        default="shades-of-gray",
+        help=(
+            "méthode d'estimation de l'illuminant. shades-of-gray résiste mieux aux "
+            "fonds colorés que grayworld ; white-patch se cale sur les hautes "
+            "lumières. Attention : none ne coupe QUE la teinte, pas l'exposition — "
+            "voir --no-color"
+        ),
+    )
+    color.add_argument(
+        "--minkowski-p",
+        type=float,
+        default=6.0,
+        help="exposant de shades-of-gray : 1 redonne grayworld, l'infini white-patch",
+    )
     color.add_argument(
         "--auto-levels",
         type=float,
@@ -110,7 +156,12 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="corrige chaque photo isolément au lieu de l'aligner sur le lot",
     )
-    color.add_argument("--max-gain", type=float, default=2.0)
+    color.add_argument(
+        "--max-gain",
+        type=float,
+        default=2.0,
+        help="gain maximal par canal, pour qu'un fond très coloré ne fasse pas dériver la teinte",
+    )
     color.add_argument(
         "--max-luminance-shift",
         type=float,
@@ -135,12 +186,29 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
     )
 
     grid = parser.add_argument_group("mise en page")
-    grid.add_argument("-c", "--columns", type=int, default=5)
+    grid.add_argument(
+        "-c",
+        "--columns",
+        type=int,
+        default=5,
+        help=(
+            "nombre de colonnes ; il fixe la largeur des photos, donc le nombre de lignes par page"
+        ),
+    )
     grid.add_argument("--padding", type=float, default=0.2, help="blanc par colonne, en fraction")
-    grid.add_argument("--line-skip", type=float, default=8.0, help="en points")
+    grid.add_argument(
+        "--line-skip",
+        type=float,
+        default=8.0,
+        help="espace vertical entre deux rangées, en points PostScript",
+    )
     grid.add_argument("--font-size", type=float, default=10.0, help="taille des noms, en points")
-    grid.add_argument("--landscape", action="store_true")
-    grid.add_argument("--no-center-last-row", action="store_true")
+    grid.add_argument("--landscape", action="store_true", help="page en paysage")
+    grid.add_argument(
+        "--no-center-last-row",
+        action="store_true",
+        help="aligne à gauche la dernière ligne incomplète au lieu de la centrer",
+    )
     grid.add_argument(
         "--no-shrink-names",
         action="store_true",
@@ -153,20 +221,43 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
         metavar="FRACTION",
         help="plancher de cette réduction, en fraction de --font-size",
     )
-    grid.add_argument("--no-tags", action="store_true")
-    grid.add_argument("--no-groups", action="store_true")
-    grid.add_argument("--no-badges", action="store_true")
+    grid.add_argument(
+        "--no-tags", action="store_true", help="masque les étiquettes de la gouttière gauche"
+    )
+    grid.add_argument(
+        "--no-groups", action="store_true", help="masque les étiquettes de la gouttière droite"
+    )
+    grid.add_argument("--no-badges", action="store_true", help="masque l'étoile de badge")
 
 
 def _add_template(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("output", type=Path, nargs="?", default=Path("classe.csv"))
+    parser.add_argument(
+        "output",
+        type=Path,
+        nargs="?",
+        default=Path("classe.csv"),
+        help="chemin du CSV d'exemple à écrire",
+    )
 
 
 def _add_inspect(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("photos", type=Path)
-    parser.add_argument("-o", "--output", type=Path, default=Path("detections"))
-    parser.add_argument("--backend", choices=("yunet", "haar"), default="yunet")
-    parser.add_argument("--confidence", type=float, default=0.6)
+    parser.add_argument("photos", type=Path, help="dossier à examiner")
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=Path("detections"),
+        help="dossier où écrire les images annotées ; l'index dessiné est celui à passer à --pick",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=("yunet", "haar"),
+        default="yunet",
+        help="détecteur à éprouver ; le même que celui que prendra « build »",
+    )
+    parser.add_argument(
+        "--confidence", type=float, default=0.6, help="seuil de détection à éprouver"
+    )
 
 
 # --------------------------------------------------------------------------- #

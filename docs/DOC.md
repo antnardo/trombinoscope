@@ -375,6 +375,35 @@ Le détail complet, avec les mesures, est dans [color.md](color.md). En pratique
 - **`--no-color`** ne touche à rien : ni balance des blancs, ni exposition. C'est
   le seul réglage qui garantisse des portraits identiques aux photos d'origine.
 
+### 6.0 Depuis Python
+
+La ligne de commande ne fait que construire une `ColorConfig`. Il n'y a pas de
+drapeau `no_color` : c'est une combinaison de trois champs, chacun coupant un
+traitement.
+
+| Option | Équivalent `ColorConfig` |
+| --- | --- |
+| *(défaut)* | `ColorConfig()` |
+| `--white-balance none` | `white_balance="none"` |
+| `--strength 0.7` | `strength=0.7` |
+| `--no-harmonize` | `harmonize_batch=False` |
+| `--max-luminance-shift 10` | `max_luminance_shift=10.0` |
+| `--max-luminance-shift 0` | `max_luminance_shift=None` |
+| `--auto-levels 0.5` | `auto_levels_clip=0.5` |
+| **`--no-color`** | **`white_balance="none", harmonize_batch=False`** |
+
+```python
+from trombinoscope import BuildOptions, ColorConfig, TrombinoscopeBuilder
+
+# aucune correction : les portraits sortent tels quels
+options = BuildOptions(color=ColorConfig(white_balance="none", harmonize_batch=False))
+TrombinoscopeBuilder(options).build("photos/", "classe.csv", "trombi.pdf")
+```
+
+`harmonize_batch` est celui qu'on oublie : **`white_balance="none"` seul laisse
+passer la normalisation d'exposition**, qui est souvent ce qu'on cherchait à
+couper. `auto_levels_clip=None` est déjà le défaut, inutile de le préciser.
+
 ### 6.1 La bride sur l'exposition
 
 Une photo nettement plus sombre ou plus claire que le lot est une valeur

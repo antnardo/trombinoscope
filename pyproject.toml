@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "trombinoscope"
-version = "0.4.0"
+version = "0.4.1"
 description = "Génère un trombinoscope PDF prêt à imprimer depuis un dossier de photos brutes et une liste de personnes."
 readme = "README.md"
 requires-python = ">=3.11"

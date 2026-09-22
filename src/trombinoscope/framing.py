@@ -16,6 +16,10 @@ import numpy as np
 from trombinoscope.log import debug
 from trombinoscope.models import Box, Detection, FramingConfig
 
+__all__ = [
+    "PortraitFramer",
+]
+
 
 class PortraitFramer:
     """Produit un portrait de taille fixe centré sur une détection.

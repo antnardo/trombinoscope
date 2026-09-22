@@ -42,6 +42,7 @@ from trombinoscope.models import (
     GridConfig,
     Landmarks,
     Person,
+    SegmentationConfig,
 )
 from trombinoscope.pdf.grid import GridPaginator, TrombiRenderer, render_pdf
 from trombinoscope.pipeline import BuildOptions, TrombinoscopeBuilder, build_trombinoscope
@@ -52,12 +53,21 @@ from trombinoscope.roster import (
     remove_accents,
     write_template,
 )
+from trombinoscope.segmentation import (
+    BackgroundReplacer,
+    MaskQuality,
+    Segmenter,
+    SelfieSegmenter,
+    assess_mask,
+    replace_background,
+)
 
-__version__ = "0.4.2"
+__version__ = "0.5.0"
 
 __all__ = [
     "NO_COLOR",
     "AutoLevels",
+    "BackgroundReplacer",
     "BatchColorHarmonizer",
     "Box",
     "BuildOptions",
@@ -72,9 +82,13 @@ __all__ = [
     "HaarCascadeDetector",
     "Landmarks",
     "LuminanceMatcher",
+    "MaskQuality",
     "Person",
     "PortraitFramer",
     "RosterLoader",
+    "SegmentationConfig",
+    "Segmenter",
+    "SelfieSegmenter",
     "ShadesOfGrayEstimator",
     "TrombiRenderer",
     "TrombinoscopeBuilder",
@@ -82,6 +96,7 @@ __all__ = [
     "WhitePatchEstimator",
     "YuNetDetector",
     "__version__",
+    "assess_mask",
     "build_detector",
     "build_trombinoscope",
     "configure",
@@ -92,6 +107,7 @@ __all__ = [
     "read_image",
     "remove_accents",
     "render_pdf",
+    "replace_background",
     "set_interactive",
     "write_image",
     "write_template",

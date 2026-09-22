@@ -37,6 +37,12 @@ puis compose une grille paginée.
   sur [reportlab-layout](https://pypi.org/project/reportlab-layout/).
 - **Détecteur léger et remplaçable.** YuNet en ONNX, 227 Ko, embarqué dans la
   roue. Le détecteur est un protocole : branchez le vôtre si vous préférez.
+- **Détourage du fond, en option.** `--remove-background` remplace le fond de
+  chaque portrait par un aplat, ce qui homogénéise une planche bien plus qu'une
+  correction de teinte. Modèle MediaPipe de 244 Ko embarqué, sans dépendance
+  supplémentaire. Un garde-fou refuse les masques douteux et conserve alors la
+  photo d'origine : sur un document nominatif, un visage mutilé est pire qu'un
+  fond hétérogène.
 
 ## Ce qu'il ne fait pas
 

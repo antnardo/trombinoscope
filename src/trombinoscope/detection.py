@@ -25,6 +25,18 @@ import numpy as np
 from trombinoscope.log import debug, info
 from trombinoscope.models import Box, Detection, Landmarks
 
+__all__ = [
+    "DEFAULT_CONFIDENCE",
+    "DEFAULT_MAX_SIDE",
+    "FaceDetector",
+    "HaarCascadeDetector",
+    "YuNetDetector",
+    "build_detector",
+    "haar_available",
+    "model_path",
+    "pick_detection",
+]
+
 #: Score minimal en dessous duquel une détection n'est jamais retenue.
 DEFAULT_CONFIDENCE = 0.6
 #: Les photos sont réduites à ce côté maximal avant détection, puis les boîtes

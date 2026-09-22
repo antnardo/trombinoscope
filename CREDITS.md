@@ -13,8 +13,29 @@
 
 La licence MIT du dépôt OpenCV Zoo couvre les poids comme le code, ce qui autorise
 la redistribution dans une roue PyPI — contrairement, par exemple, aux poids
-d'InsightFace ou de MODNet, réservés à un usage non commercial. Voir
+d'InsightFace ou de BRIA RMBG, réservés à un usage non commercial. Voir
 [docs/improvements.md](docs/improvements.md), section 1.2.
+
+### Modèle de segmentation MediaPipe SelfieSegmenter
+
+`src/trombinoscope/assets/models/selfie_segmenter.tflite` — 244 Ko.
+
+- Source : [MediaPipe](https://github.com/google-ai-edge/mediapipe), Google
+- Poids : `https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite`
+- Licence : Apache-2.0, déclarée sur la
+  [model card officielle](https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Selfie%20Segmentation.pdf)
+  — « LICENSED UNDER / Apache License, Version 2.0 »
+- Empreinte SHA-256 : `191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b`
+
+Le texte de la licence est livré à côté du modèle, dans
+`assets/models/LICENSE-Apache-2.0.txt` : Apache-2.0 impose de joindre la licence
+au fichier redistribué, ce que la MIT de YuNet n'exige pas.
+
+Une précision de provenance, parce qu'elle diffère de celle de YuNet : le
+`.tflite` n'est pas versionné dans le dépôt GitHub de MediaPipe — il est tiré de
+Google Cloud Storage à la compilation. Sa licence ne vient donc pas par inclusion
+dans un dépôt, mais d'une déclaration explicite sur la model card, ce qui est une
+base plus solide et non plus faible.
 
 ### Silhouette de remplacement
 

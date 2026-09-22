@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 from pypdf import PdfReader
 
-from trombinoscope.cli import _options_from, _parse_picks, build_parser, main
+from trombinoscope.cli import (
+    _options_from,
+    _parse_color,
+    _parse_picks,
+    build_parser,
+    main,
+)
+from trombinoscope.models import SegmentationConfig
 from trombinoscope.roster import load_roster
 
 
@@ -301,3 +308,58 @@ class TestHelpCompleteness:
         aides = {", ".join(a.option_strings): a.help for a in self._actions("build") if a.help}
         assert "exposition" in aides["--no-color"]
         assert "--no-color" in aides["--white-balance"]
+
+
+class TestParseColor:
+    @pytest.mark.parametrize(
+        ("saisie", "attendu"),
+        [
+            ("#ffffff", (255, 255, 255)),
+            ("ffffff", (255, 255, 255)),
+            ("#ff0000", (0, 0, 255)),  # rouge saisi en RVB, rendu en BGR
+            ("0,128,255", (255, 128, 0)),
+            ("  #00FF00  ", (0, 255, 0)),
+        ],
+    )
+    def test_formats_acceptes(self, saisie, attendu):
+        assert _parse_color(saisie) == attendu
+
+    @pytest.mark.parametrize("saisie", ["rouge", "#12345", "1,2", "#gggggg", "300,0,0", "1,2,3,4"])
+    def test_saisie_invalide_arrete_proprement(self, saisie):
+        with pytest.raises(SystemExit):
+            _parse_color(saisie)
+
+
+class TestSegmentationOptions:
+    def test_detourage_inactif_sans_l_option(self):
+        assert not _options_from(parse()).segmentation.enabled
+
+    def test_remove_background_active_le_detourage(self):
+        assert _options_from(parse("--remove-background")).segmentation.enabled
+
+    def test_la_couleur_de_fond_est_convertie_en_bgr(self):
+        options = _options_from(parse("--remove-background", "--background", "#ff0000"))
+        assert options.segmentation.background == (0, 0, 255)
+
+    def test_les_reglages_fins_sont_transmis(self):
+        options = _options_from(
+            parse(
+                "--remove-background",
+                "--alpha-gain",
+                "6",
+                "--background-erode",
+                "3",
+                "--min-face-coverage",
+                "0.8",
+            )
+        )
+        segmentation = options.segmentation
+        assert segmentation.alpha_gain == 6
+        assert segmentation.erode_px == 3
+        assert segmentation.min_face_coverage == 0.8
+
+    def test_les_defauts_suivent_ceux_de_la_configuration(self):
+        """La CLI ne doit pas diverger silencieusement de l'API Python."""
+        depuis_cli = _options_from(parse("--remove-background")).segmentation
+        defauts = SegmentationConfig(enabled=True)
+        assert depuis_cli == defauts

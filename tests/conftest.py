@@ -94,6 +94,34 @@ class StubDetector:
         return [Detection(box=box, confidence=0.99, landmarks=landmarks_for(box))]
 
 
+class StubSegmenter:
+    """Renvoie un masque fixé d'avance, sans charger le modèle de segmentation."""
+
+    def __init__(self, mask: np.ndarray | None = None) -> None:
+        self.mask_to_return = mask
+        self.calls = 0
+
+    def mask(self, image: np.ndarray) -> np.ndarray:
+        self.calls += 1
+        if self.mask_to_return is not None:
+            return self.mask_to_return
+        return clean_mask(*image.shape[:2])
+
+
+def clean_mask(height: int = 800, width: int = 600, *, face: Box | None = None) -> np.ndarray:
+    """Masque plausible : un sujet unique, franc, ne touchant pas le bord haut.
+
+    Calé sur la géométrie de :func:`make_photo` pour couvrir entièrement la boîte
+    de visage par défaut — c'est la condition que surveille le garde-fou le plus
+    discriminant.
+    """
+    face = face or default_face_box(width, height)
+    mask = np.zeros((height, width), dtype=np.float32)
+    top = max(face.y0 - 40, 1)
+    mask[top:, width // 4 : 3 * width // 4] = 1.0
+    return mask
+
+
 def landmarks_for(box: Box, *, tilt: float = 0.0) -> Landmarks:
     """Points caractéristiques cohérents avec une boîte, éventuellement inclinés."""
     cx, cy = box.center
@@ -183,3 +211,13 @@ def sample_photos() -> list[Path]:
     if not photos:
         pytest.skip("portraits absents : lancer `python scripts/fetch_samples.py`")
     return photos
+
+
+@pytest.fixture
+def stub_segmenter() -> StubSegmenter:
+    return StubSegmenter()
+
+
+@pytest.fixture
+def mask(face_box: Box) -> np.ndarray:
+    return clean_mask(800, 600, face=face_box)

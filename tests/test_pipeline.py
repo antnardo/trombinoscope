@@ -7,13 +7,22 @@ exercée sans charger le moindre modèle ni toucher au réseau.
 from pathlib import Path
 
 import cv2
+import numpy as np
 import pytest
 from pypdf import PdfReader
 
-from trombinoscope.models import ColorConfig, Detection, FramingConfig, GridConfig, Person
+from trombinoscope.models import (
+    NO_COLOR,
+    ColorConfig,
+    Detection,
+    FramingConfig,
+    GridConfig,
+    Person,
+    SegmentationConfig,
+)
 from trombinoscope.pipeline import BuildOptions, TrombinoscopeBuilder, build_trombinoscope
 
-from .conftest import StubDetector, default_face_box, make_photo
+from .conftest import StubDetector, StubSegmenter, default_face_box, make_photo
 
 
 @pytest.fixture
@@ -220,3 +229,102 @@ class TestErrors:
     def test_missing_roster(self, builder, photo_dir, tmp_path):
         with pytest.raises(FileNotFoundError):
             builder.build(photo_dir, Path("nulle-part.csv"), tmp_path / "o.pdf")
+
+
+# --------------------------------------------------------------------------- #
+# Détourage du fond
+# --------------------------------------------------------------------------- #
+
+
+def subject_mask(height: int = 800, width: int = 600) -> np.ndarray:
+    """Masque couvrant tout le visage mais **plus étroit que le cadre du portrait**.
+
+    C'est la condition pour que du fond reste visible dans le portrait produit :
+    un masque plus large que le recadrage ne laisserait rien à remplacer, et le
+    test passerait sans rien démontrer.
+    """
+    face = default_face_box(width, height)
+    mask = np.zeros((height, width), dtype=np.float32)
+    mask[face.y0 - 10 :, face.x0 - 5 : face.x1 + 5] = 1.0
+    return mask
+
+
+def corner_color(portrait: Path) -> tuple[int, int, int]:
+    return tuple(int(v) for v in cv2.imread(str(portrait))[2, 2])
+
+
+class TestSegmentation:
+    def test_le_detourage_est_inactif_par_defaut(self, photo_dir, roster_csv, tmp_path):
+        stub = StubSegmenter()
+        builder = TrombinoscopeBuilder(
+            BuildOptions(grid=GridConfig(columns=3)),
+            detector=StubDetector(),
+            segmenter=stub,
+        )
+        builder.build(photo_dir, roster_csv, tmp_path / "out.pdf")
+        assert stub.calls == 0
+
+    def test_le_fond_est_remplace_quand_il_est_demande(self, photo_dir, roster_csv, tmp_path):
+        builder = TrombinoscopeBuilder(
+            BuildOptions(
+                grid=GridConfig(columns=3),
+                segmentation=SegmentationConfig(enabled=True, background=(255, 255, 255)),
+                color=NO_COLOR,
+            ),
+            detector=StubDetector(),
+            segmenter=StubSegmenter(subject_mask()),
+        )
+        report = builder.build(photo_dir, roster_csv, tmp_path / "out.pdf")
+        assert not report.background_kept
+        assert corner_color(report.people[0].portrait) == (255, 255, 255)
+
+    def test_sans_detourage_le_fond_d_origine_subsiste(self, photo_dir, roster_csv, tmp_path):
+        builder = TrombinoscopeBuilder(
+            BuildOptions(grid=GridConfig(columns=3), color=NO_COLOR), detector=StubDetector()
+        )
+        report = builder.build(photo_dir, roster_csv, tmp_path / "out.pdf")
+        assert corner_color(report.people[0].portrait) != (255, 255, 255)
+
+    def test_un_masque_refuse_conserve_la_photo_et_le_signale(
+        self, photo_dir, roster_csv, tmp_path
+    ):
+        """Le repli attendu : le traitement continue, la photo reste intacte."""
+        aberrant = np.ones((800, 600), dtype=np.float32)
+        builder = TrombinoscopeBuilder(
+            BuildOptions(
+                grid=GridConfig(columns=3),
+                segmentation=SegmentationConfig(enabled=True),
+                color=NO_COLOR,
+            ),
+            detector=StubDetector(),
+            segmenter=StubSegmenter(aberrant),
+        )
+        report = builder.build(photo_dir, roster_csv, tmp_path / "out.pdf")
+        assert len(report.background_kept) == len(report.photos)
+        assert corner_color(report.people[0].portrait) != (255, 255, 255)
+        assert "fond(s) conservé(s)" in report.summary()
+
+    def test_un_fond_conserve_ne_rend_pas_le_rapport_mauvais(self, photo_dir, roster_csv, tmp_path):
+        """Conserver un fond est le repli prévu, pas un échec du build."""
+        builder = TrombinoscopeBuilder(
+            BuildOptions(grid=GridConfig(columns=3), segmentation=SegmentationConfig(enabled=True)),
+            detector=StubDetector(),
+            segmenter=StubSegmenter(np.ones((800, 600), dtype=np.float32)),
+        )
+        report = builder.build(photo_dir, roster_csv, tmp_path / "out.pdf")
+        assert report.background_kept
+        assert report.ok
+
+    def test_la_couleur_est_mesuree_avant_le_detourage(self, photo_dir, roster_csv, tmp_path):
+        """Invariant d'ordre : composer avant la mesure ferait lire au batch un fond
+        neutre, et la correction couleur ne corrigerait plus rien."""
+        illuminants = []
+        for segmentation in (SegmentationConfig(), SegmentationConfig(enabled=True)):
+            builder = TrombinoscopeBuilder(
+                BuildOptions(grid=GridConfig(columns=3), segmentation=segmentation),
+                detector=StubDetector(),
+                segmenter=StubSegmenter(subject_mask()),
+            )
+            builder.build(photo_dir, roster_csv, tmp_path / f"{segmentation.enabled}.pdf")
+            illuminants.append(builder._harmonizer.reference_illuminant)
+        assert illuminants[0] == pytest.approx(illuminants[1])

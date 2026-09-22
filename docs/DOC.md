@@ -12,10 +12,11 @@ servent en pratique.
 - [4. L'API Python](#4-lapi-python)
 - [5. Le cadrage](#5-le-cadrage)
 - [6. Les couleurs](#6-les-couleurs)
-- [7. La mise en page](#7-la-mise-en-page)
-- [8. Diagnostic](#8-diagnostic)
-- [9. Recettes](#9-recettes)
-- [10. Migration depuis la version 2020](#10-migration-depuis-la-version-2020)
+- [7. Le détourage du fond](#7-le-détourage-du-fond)
+- [8. La mise en page](#8-la-mise-en-page)
+- [9. Diagnostic](#9-diagnostic)
+- [10. Recettes](#10-recettes)
+- [11. Migration depuis la version 2020](#11-migration-depuis-la-version-2020)
 
 ## 1. Le modèle mental
 
@@ -173,6 +174,18 @@ possible — un code `1` ne signifie pas qu'il manque.
 | `--no-harmonize` | — | Corrige chaque photo isolément |
 | `--max-luminance-shift` | `20` | Déplacement maximal de l'exposition, en points de `L*` (`0` lève la bride) |
 | `--no-color` | — | Ne touche pas du tout aux couleurs |
+
+#### Détourage du fond
+
+Voir [section 7](#7-le-détourage-du-fond).
+
+| Option | Défaut | Effet |
+| --- | --- | --- |
+| `--remove-background` | — | Remplace le fond par un aplat |
+| `--background` | `#ffffff` | Couleur de remplissage, `#rrggbb` ou `r,g,b` |
+| `--alpha-gain` | `4.0` | Raidit la rampe du masque : le remède au halo |
+| `--background-erode PX` | `1` | Rétrécit le masque avant compositing |
+| `--min-face-coverage` | `0.90` | En dessous, la photo d'origine est conservée |
 
 #### Mise en page
 
@@ -427,9 +440,139 @@ Mesuré sur un lot de 39 portraits dont un à 41 points de la médiane :
 La bride garde l'essentiel de l'homogénéisation en divisant les dégâts par
 trois. `--max-luminance-shift 0` la lève, `--max-luminance-shift 10` la resserre.
 
-## 7. La mise en page
+## 7. Le détourage du fond
 
-### 7.0 Noms trop longs
+Sur une planche, un fond hétérogène saute aux yeux bien avant un écart de balance
+des blancs : remplacer chaque fond par un aplat fait donc davantage pour la
+cohérence visuelle que toute la section précédente. C'est désactivé par défaut,
+parce que le traitement modifie l'image de façon visible, là où la correction
+couleur reste discrète.
+
+```bash
+trombinoscope build photos/ classe.csv -o trombi.pdf --remove-background
+```
+
+Depuis Python :
+
+```python
+from trombinoscope import SegmentationConfig, build_trombinoscope
+
+build_trombinoscope(
+    "photos/", "classe.csv", "trombi.pdf",
+    segmentation=SegmentationConfig(enabled=True, background=(255, 255, 255)),
+)
+```
+
+`background` est en **BGR**, comme partout dans OpenCV. La CLI, elle, accepte du
+`#rrggbb` ou du `r,g,b` en RVB — l'ordre auquel on s'attend en tapant une couleur.
+
+### 7.1 Le modèle
+
+MediaPipe SelfieSegmenter, 244 Ko, embarqué dans la roue et exécuté par
+`cv2.dnn` : **aucune dépendance supplémentaire**, ni `onnxruntime`, ni
+`mediapipe`, ni TensorFlow. Les poids sont sous Apache-2.0 (voir
+[CREDITS.md](../CREDITS.md)).
+
+Le choix est expliqué dans [improvements.md](improvements.md), section 1. En
+résumé : il tient tête à des modèles 18 à 100 fois plus lourds sur ce type
+d'image, parce qu'il est entraîné exactement sur ce cas — une personne, cadrage
+buste, face caméra.
+
+Il fait de la **segmentation**, pas du *matting* : son contour est plus dur que
+celui d'un modèle spécialisé, et il laisse un liseré sur les cheveux fins. D'où
+`--alpha-gain`, qui raidit la rampe du masque et fait disparaître ce halo. C'est
+lui le remède, pas `--background-erode` : le liseré vient d'une rampe trop douce,
+pas d'un masque trop large, et éroder mange les cheveux sans effacer le halo.
+
+Corollaire pratique : **préférez un fond de remplacement clair.** Sur du blanc le
+liseré résiduel est invisible ; sur du sombre il se voit.
+
+### 7.2 Le garde-fou
+
+Un détourage raté est bien plus laid qu'un fond hétérogène, et la raison tient à
+l'objet : un trombinoscope est nominatif. Un fond bizarre passe pour une photo
+authentique ; une oreille rognée passe pour un défaut du document, et la personne
+concernée est celle qui le remarquera.
+
+Le modèle ne fournissant aucun indice de confiance, le paquet en construit un à
+partir de cinq mesures géométriques — donc indépendantes des erreurs du réseau
+qu'elles surveillent :
+
+| Indicateur | Rejet si | Ce qu'il attrape |
+| --- | --- | --- |
+| couverture du visage | < 90 % | le masque efface une partie du visage |
+| surface du sujet | hors de 10–85 % | fond entier gardé, ou sujet effacé |
+| composantes connexes | > 1 | fragments de fond détachés |
+| pixels ambigus | > 10 % | contour non décidé, masque flou |
+| contact du bord haut | oui | sujet coupé, tête tranchée après remplacement |
+
+Quand un masque est refusé, **la photo d'origine est conservée** et le traitement
+continue. Rien n'échoue :
+
+```text
+[WARN] fond conservé sur 04.jpg : visage couvert à 61% seulement
+       (visage 61%, sujet 12%, 3 composante(s), ambigus 18.2%)
+```
+
+Le rapport le dit aussi, et `report.ok` reste vrai — conserver un fond est le
+repli prévu, pas un échec :
+
+```python
+report = build_trombinoscope(...)
+print(report.background_kept)   # [PosixPath('photos/04.jpg')]
+```
+
+Le seuil de couverture n'est **pas** à 0,95, et ce n'est pas un arrondi : la boîte
+du visage est un rectangle, la tête non, donc ses coins tombent à côté du visage
+et un masque parfait ne la couvre jamais entièrement. Mesuré, un bon détourage
+donne 93 à 100 % ; à 0,95 on rejette du travail correct.
+
+### 7.3 Ce qu'il ne sait pas faire
+
+Trois limites mesurées, à connaître avant de lancer sur une classe entière :
+
+- **Un sujet devant un fond de la couleur de son vêtement** est le cas qui casse :
+  un élève en pull bordeaux devant un mur bordeaux perd une partie du buste. Le
+  contre-jour et la sous-exposition, eux, ne gênent pratiquement pas — l'inverse
+  de l'intuition.
+- **Un objet très texturé ou très saturé derrière le sujet** peut laisser un
+  fragment de fond attaché au contour. Le garde-fou n'attrape que les fragments
+  *détachés*.
+- **Ce qui est devant est gardé.** Un micro sur pied devant le sujet reste dans le
+  portrait : le modèle sépare l'avant-plan du fond, pas l'humain du reste.
+
+### 7.4 Ordre des traitements
+
+Le masque est calculé sur la photo d'origine, mais **appliqué après la correction
+couleur**. Ce n'est pas un détail d'implémentation : composer d'abord remplirait
+le fond d'un aplat neutre, que l'estimateur d'illuminant lirait comme une scène
+déjà équilibrée, et la correction couleur ne corrigerait plus rien.
+
+### 7.5 Brancher un autre modèle
+
+`Segmenter` est un protocole, comme `FaceDetector` : tout objet exposant
+`mask(image) -> np.ndarray` en flottants `[0, 1]` convient.
+
+```python
+from trombinoscope import SegmentationConfig
+from trombinoscope.pipeline import BuildOptions, TrombinoscopeBuilder
+
+class MonSegmenteur:
+    def mask(self, image):
+        ...  # votre modèle, votre licence
+
+builder = TrombinoscopeBuilder(
+    BuildOptions(segmentation=SegmentationConfig(enabled=True)),
+    segmenter=MonSegmenteur(),
+)
+```
+
+Le garde-fou s'applique de la même façon : il ne fait aucune hypothèse sur le
+modèle qui a produit le masque.
+
+## 8. La mise en page
+
+### 8.0 Noms trop longs
 
 Un nom plus large que sa colonne est **réduit automatiquement**, et lui seul :
 les autres gardent `font_size`, si bien que la planche reste homogène partout où
@@ -496,7 +639,7 @@ Les **annotations pivotées** occupent les gouttières : `tags` à gauche, `grou
 droit de la photo. Aucune troncature automatique pour l'instant : une étiquette
 trop longue déborde silencieusement.
 
-## 8. Diagnostic
+## 9. Diagnostic
 
 `BuildReport` porte tout ce qui a posé problème :
 
@@ -521,7 +664,7 @@ la photo telle quelle.
 `--absent` liste bien tout le monde. Le rapport signale les surplus des deux
 côtés.
 
-## 9. Recettes
+## 10. Recettes
 
 Trombinoscope de classe, format serré, six colonnes :
 
@@ -558,7 +701,7 @@ pip install 'trombinoscope[heic]'
 trombinoscope build photos/ classe.csv -o trombi.pdf
 ```
 
-## 10. Migration depuis la version 2020
+## 11. Migration depuis la version 2020
 
 Le module personnel dont ce paquet est issu n'a jamais été publié ; cette section
 n'intéresse que son auteur, mais elle documente les ruptures d'API. La revue

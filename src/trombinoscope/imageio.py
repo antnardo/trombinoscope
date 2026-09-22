@@ -19,6 +19,18 @@ import numpy as np
 
 from trombinoscope.log import debug, info, warning
 
+__all__ = [
+    "HEIF_SUFFIXES",
+    "IMAGE_SUFFIXES",
+    "ImageReadError",
+    "draw_detections",
+    "find_images",
+    "open_with_system_viewer",
+    "read_image",
+    "supported_suffixes",
+    "write_image",
+]
+
 #: Extensions lues nativement par OpenCV.
 IMAGE_SUFFIXES: tuple[str, ...] = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp")
 #: Extensions lisibles uniquement si ``pillow-heif`` est installé.

@@ -12,6 +12,16 @@ doit jamais bloquer sur ``input()``.
 import logging
 import sys
 
+__all__ = [
+    "LOGGER",
+    "configure",
+    "debug",
+    "error",
+    "info",
+    "set_interactive",
+    "warning",
+]
+
 LOGGER = logging.getLogger("trombinoscope")
 
 _INTERACTIVE = False

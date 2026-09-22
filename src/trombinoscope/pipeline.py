@@ -7,10 +7,17 @@ mesurées. La passe 1 détecte et recadre, la passe 2 corrige et écrit.
 L'appariement personnes ↔ photos est entièrement résolu **avant** la première
 détection. Un échec de détection ne peut donc pas décaler les personnes
 suivantes : il produit un portrait non recadré et une entrée dans le rapport.
+
+Le détourage impose sa propre contrainte d'ordre, moins évidente : le masque est
+calculé en passe 1 sur la photo d'origine — c'est là que le réseau est le plus
+juste, et c'est la seule échelle où les seuils du garde-fou ont un sens — mais il
+n'est **appliqué qu'en passe 2, après la correction couleur**. Composer d'abord
+remplirait le fond d'un aplat neutre, que l'estimateur d'illuminant lirait comme
+une scène déjà équilibrée : la correction couleur ne ferait plus rien.
 """
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
@@ -27,15 +34,24 @@ from trombinoscope.imageio import (
 )
 from trombinoscope.log import info, warning
 from trombinoscope.models import (
+    Box,
     BuildReport,
     ColorConfig,
     FramingConfig,
     GridConfig,
     Person,
+    SegmentationConfig,
     positional_match,
 )
 from trombinoscope.pdf.grid import TrombiRenderer
 from trombinoscope.roster import load_roster
+from trombinoscope.segmentation import BackgroundReplacer, Segmenter
+
+__all__ = [
+    "BuildOptions",
+    "TrombinoscopeBuilder",
+    "build_trombinoscope",
+]
 
 
 @dataclass(slots=True)
@@ -52,6 +68,7 @@ class BuildOptions:
     framing: FramingConfig = field(default_factory=FramingConfig)
     color: ColorConfig = field(default_factory=ColorConfig)
     grid: GridConfig = field(default_factory=GridConfig)
+    segmentation: SegmentationConfig = field(default_factory=SegmentationConfig)
     detector_backend: str = "yunet"
     confidence: float = 0.6
     logo: Path | None = None
@@ -66,19 +83,25 @@ class _Pending:
     person: Person
     photo: Path
     portrait: np.ndarray
-    face_box: object | None
+    face_box: Box | None
+    #: Masque de détourage déjà recadré, ou ``None`` si le fond est conservé.
+    mask: np.ndarray | None = None
 
 
 class TrombinoscopeBuilder:
     """Assemble le trombinoscope. Responsabilité unique : enchaîner les étapes.
 
     Chaque étape est déléguée à une classe dédiée — détection, cadrage, couleur,
-    rendu — qui reste utilisable seule. Le détecteur est injectable, ce qui permet
-    de brancher un autre modèle ou un bouchon de test.
+    rendu — qui reste utilisable seule. Détecteur et segmenteur sont injectables,
+    ce qui permet de brancher un autre modèle ou un bouchon de test.
     """
 
     def __init__(
-        self, options: BuildOptions | None = None, *, detector: FaceDetector | None = None
+        self,
+        options: BuildOptions | None = None,
+        *,
+        detector: FaceDetector | None = None,
+        segmenter: Segmenter | None = None,
     ):
         self._options = options or BuildOptions()
         self._detector = detector or build_detector(
@@ -86,6 +109,14 @@ class TrombinoscopeBuilder:
         )
         self._framer = PortraitFramer(self._options.framing)
         self._harmonizer = BatchColorHarmonizer(self._options.color)
+        segmentation = self._options.segmentation
+        self._replacer = (
+            BackgroundReplacer(segmentation, segmenter=segmenter) if segmentation.enabled else None
+        )
+        # Le masque subit exactement la géométrie du portrait — recadrage *et*
+        # rotation de redressement — donc le même recadreur, au remplissage près :
+        # ce qui déborde de la photo est du fond, pas du sujet.
+        self._mask_framer = PortraitFramer(replace(self._options.framing, fill=(0, 0, 0)))
 
     @property
     def options(self) -> BuildOptions:
@@ -178,11 +209,38 @@ class TrombinoscopeBuilder:
             chosen = pick_detection(detections, self._options.face_choice.get(person.last_name, 0))
             portrait = self._framer.frame(image, chosen)
             face_box = self._framer.framed_box(image, chosen)
+            # Mesure faite sur le portrait au fond intact : voir la docstring du
+            # module. Le masque, lui, est calculé sur la photo d'origine.
             self._harmonizer.measure(portrait, face_box)
             pending.append(
-                _Pending(person=person, photo=photo, portrait=portrait, face_box=face_box)
+                _Pending(
+                    person=person,
+                    photo=photo,
+                    portrait=portrait,
+                    face_box=face_box,
+                    mask=self._mask_for(image, chosen, photo, report),
+                )
             )
         return pending
+
+    def _mask_for(self, image: np.ndarray, chosen, photo: Path, report: BuildReport):
+        """Masque de détourage recadré, ou ``None`` s'il faut garder le fond.
+
+        Le garde-fou décide sur la photo d'origine, à la résolution où ses seuils
+        ont été calibrés, et avant tout recadrage qui fausserait la surface
+        d'avant-plan comme la détection d'un sujet coupé.
+        """
+        if self._replacer is None:
+            return None
+        full, quality = self._replacer.compute(image, chosen.box if chosen else None)
+        if not quality.ok:
+            report.background_kept.append(photo)
+            warning(
+                "fond conservé sur %s : %s (%s)", photo.name, quality.reason, quality.describe()
+            )
+            return None
+        as_image = np.repeat((full * 255).astype(np.uint8)[:, :, np.newaxis], 3, axis=2)
+        return self._mask_framer.frame(as_image, chosen)[:, :, 0].astype(np.float32) / 255.0
 
     def _second_pass(self, pending: Sequence[_Pending], portrait_dir: Path) -> None:
         """Applique la correction calée sur le lot, puis écrit les portraits."""
@@ -193,6 +251,8 @@ class TrombinoscopeBuilder:
 
         for item in pending:
             corrected = self._harmonizer.transform(item.portrait, item.face_box)
+            if item.mask is not None and self._replacer is not None:
+                corrected = self._replacer.apply(corrected, item.mask)
             target = portrait_dir / f"{item.photo.stem}.portrait.jpg"
             write_image(target, corrected)
             item.person.portrait = target

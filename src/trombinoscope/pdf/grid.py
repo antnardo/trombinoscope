@@ -26,6 +26,18 @@ from trombinoscope.log import debug, info, warning
 from trombinoscope.models import GridConfig, Person
 from trombinoscope.pdf.canvas import styles
 
+__all__ = [
+    "Cell",
+    "GridPaginator",
+    "PageLayout",
+    "TrombiRenderer",
+    "centered_columns",
+    "corner_parts",
+    "default_placeholder",
+    "join_annotations",
+    "render_pdf",
+]
+
 
 def join_annotations(parts) -> str:
     """Assemble des étiquettes en une ligne, en ignorant les vides."""

@@ -9,6 +9,20 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+__all__ = [
+    "NO_COLOR",
+    "Box",
+    "BuildReport",
+    "ColorConfig",
+    "Detection",
+    "FramingConfig",
+    "GridConfig",
+    "Landmarks",
+    "Person",
+    "SegmentationConfig",
+    "positional_match",
+]
+
 # --------------------------------------------------------------------------- #
 # Géométrie
 # --------------------------------------------------------------------------- #
@@ -245,6 +259,82 @@ class ColorConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class SegmentationConfig:
+    """Paramètres du détourage de fond. Voir ``docs/improvements.md``, section 1.
+
+    Désactivé par défaut, et ce n'est pas de la timidité : le détourage change
+    l'image de façon visible et irréversible, là où la correction couleur reste
+    discrète. C'est à l'utilisateur de le demander.
+
+    Les seuils de rejet ci-dessous ne mesurent pas la qualité perçue mais la
+    plausibilité géométrique du masque. Ils sont volontairement sévères : rejeter
+    à tort coûte un fond hétérogène, accepter à tort coûte un visage mutilé sur un
+    document nominatif.
+    """
+
+    #: Remplace le fond de chaque portrait par ``background``.
+    enabled: bool = False
+    #: Couleur de remplissage, en BGR comme partout dans OpenCV.
+    background: tuple[int, int, int] = (255, 255, 255)
+    #: Raidit la rampe alpha autour de 0,5 avant compositing, ce qui rétrécit la
+    #: zone de mélange où le fond d'origine transparaît.
+    #:
+    #: C'est **le** remède au halo, et l'érosion n'en est pas un : le liseré ne
+    #: vient pas d'un masque trop large mais d'une rampe trop douce. Vérifié à
+    #: l'œil sur un portrait à fond noir — éroder jusqu'à 3 px mange les cheveux
+    #: sans effacer le halo, tandis qu'un gain de 4 le supprime en gardant la
+    #: mèche. Au-delà de 8, le contour redevient dur et découpé.
+    #: ``1.0`` laisse le masque tel quel.
+    alpha_gain: float = 4.0
+    #: Rétrécit le masque avant compositing. Le réseau garde presque toujours un
+    #: ou deux pixels du fond d'origine sur le contour, et ce liseré se voit
+    #: beaucoup plus qu'un cheveu perdu.
+    erode_px: int = 1
+    #: Fraction minimale de la boîte du visage devant tomber dans le masque.
+    #: C'est le garde-fou le plus discriminant, et il est gratuit : la boîte vient
+    #: de YuNet, déjà exécuté.
+    #:
+    #: Le seuil est à 0,90 et non 0,95, contrairement à ce que suggérait l'étude.
+    #: La raison est géométrique : **la boîte est un rectangle, pas une tête**.
+    #: Ses coins tombent nécessairement à côté du visage, donc un masque parfait
+    #: ne couvre jamais 100 % de la boîte. Mesuré sur les portraits de test, un
+    #: détourage correct donne 93 à 100 % — un seuil à 0,95 en rejetait deux sur
+    #: huit. À 0,90, la marge reste large devant un vrai échec, où la couverture
+    #: s'effondre bien plus bas.
+    min_face_coverage: float = 0.90
+    #: Encadrement de la surface classée « sujet ». En dehors, le masque est
+    #: presque toujours aberrant : fond entier conservé, ou sujet effacé.
+    foreground_range: tuple[float, float] = (0.10, 0.85)
+    #: Nombre maximal de composantes connexes dépassant ``min_component_fraction``.
+    #: Au-delà de une, il reste des fragments de fond — typiquement un objet très
+    #: saturé derrière le sujet.
+    max_components: int = 1
+    #: Taille minimale, en fraction de l'image, pour qu'une composante compte.
+    min_component_fraction: float = 0.005
+    #: Fraction maximale de pixels à alpha intermédiaire. Un masque sain reste
+    #: entre 2 et 5 % ; un masque flou monte à 12–24 %.
+    max_ambiguous: float = 0.10
+    #: Rejette les masques touchant le bord supérieur : le sujet est alors coupé,
+    #: et remplacer le fond produirait une tête tranchée.
+    reject_touching_top: bool = True
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.min_face_coverage <= 1:
+            raise ValueError("min_face_coverage doit être dans [0, 1]")
+        low, high = self.foreground_range
+        if not 0 <= low < high <= 1:
+            raise ValueError("foreground_range doit vérifier 0 <= low < high <= 1")
+        if self.erode_px < 0:
+            raise ValueError("erode_px ne peut pas être négatif")
+        if self.alpha_gain <= 0:
+            raise ValueError("alpha_gain doit être strictement positif")
+        if not 0 <= self.max_ambiguous <= 1:
+            raise ValueError("max_ambiguous doit être dans [0, 1]")
+        if self.max_components < 1:
+            raise ValueError("max_components doit valoir au moins 1")
+
+
+@dataclass(frozen=True, slots=True)
 class GridConfig:
     """Mise en page de la grille PDF.
 
@@ -361,6 +451,10 @@ class BuildReport:
     unmatched_photos: list[Path] = field(default_factory=list)
     no_face: list[Path] = field(default_factory=list)
     multiple_faces: list[Path] = field(default_factory=list)
+    #: Photos dont le détourage a été demandé puis refusé par le garde-fou : le
+    #: fond d'origine est conservé. Ce n'est pas un échec — c'est le repli prévu —
+    #: donc cette liste n'entre pas dans :attr:`ok`, mais elle doit être visible.
+    background_kept: list[Path] = field(default_factory=list)
     pdf: Path | None = None
 
     @property
@@ -373,6 +467,8 @@ class BuildReport:
             parts.append(f"{len(self.no_face)} sans visage détecté")
         if self.multiple_faces:
             parts.append(f"{len(self.multiple_faces)} avec plusieurs visages")
+        if self.background_kept:
+            parts.append(f"{len(self.background_kept)} fond(s) conservé(s)")
         if self.unmatched_people:
             parts.append(f"{len(self.unmatched_people)} personne(s) sans photo")
         if self.unmatched_photos:

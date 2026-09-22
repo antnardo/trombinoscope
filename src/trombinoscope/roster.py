@@ -28,6 +28,16 @@ from pathlib import Path
 from trombinoscope.log import info, warning
 from trombinoscope.models import Person
 
+__all__ = [
+    "TAG_SEPARATOR",
+    "RosterLoader",
+    "load_roster",
+    "load_sqlite",
+    "normalize_key",
+    "remove_accents",
+    "write_template",
+]
+
 #: Séparateur des étiquettes à l'intérieur d'une cellule.
 TAG_SEPARATOR = ";"
 

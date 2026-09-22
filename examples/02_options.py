@@ -25,6 +25,7 @@ from trombinoscope import (
     GridPaginator,
     Person,
     PortraitFramer,
+    SegmentationConfig,
     TrombinoscopeBuilder,
     configure,
     find_images,
@@ -96,9 +97,34 @@ def etape_3_couleur(sortie: Path) -> None:
         print(f"  {nom:16s} {couleur.white_balance}, strength={couleur.strength}")
 
 
-def etape_4_mise_en_page(sortie: Path) -> None:
+def etape_4_detourage(sortie: Path) -> None:
+    """Le détourage remplace le fond par un aplat — le traitement qui homogénéise
+    le plus une planche, et le seul qui modifie l'image de façon visible.
+
+    Il est désactivé par défaut. Le garde-fou refuse les masques douteux et
+    conserve alors la photo d'origine : ``report.background_kept`` les liste, sans
+    que ``report.ok`` devienne faux — c'est le repli prévu, pas un échec.
+    """
+    titre(4, "Détourage du fond")
+    for nom, segmentation in {
+        "blanc": SegmentationConfig(enabled=True),
+        "gris-clair": SegmentationConfig(enabled=True, background=(242, 242, 242)),
+        "masque-brut": SegmentationConfig(enabled=True, alpha_gain=1.0, erode_px=0),
+        "exigeant": SegmentationConfig(enabled=True, min_face_coverage=0.99),
+    }.items():
+        options = BuildOptions(title=f"Détourage {nom}", segmentation=segmentation)
+        rapport = TrombinoscopeBuilder(options).build(
+            PHOTOS, LISTE, sortie / f"4-detourage-{nom}.pdf", portrait_dir=sortie / f"d-{nom}"
+        )
+        conserves = len(rapport.background_kept)
+        print(f"  {nom:14s} gain={segmentation.alpha_gain}, {conserves} fond(s) conservé(s)")
+    print("  « masque-brut » montre le halo que alpha_gain fait disparaître.")
+    print("  « exigeant » montre le repli : à 0,99 le garde-fou refuse presque tout.")
+
+
+def etape_5_mise_en_page(sortie: Path) -> None:
     """Deux dispositions d'annotations, et le placement du logo et de l'étoile."""
-    titre(4, "Mise en page")
+    titre(5, "Mise en page")
     gens = load_roster(LISTE)
     for nom, grille in {
         "gouttieres": GridConfig(columns=4),
@@ -110,9 +136,9 @@ def etape_4_mise_en_page(sortie: Path) -> None:
         print(f"  {nom:18s} {grille.columns} colonnes, layout={grille.annotation_layout}")
 
 
-def etape_5_diagnostic(sortie: Path) -> None:
+def etape_6_diagnostic(sortie: Path) -> None:
     """Le rapport dit ce qui a échoué. Rien n'est avalé silencieusement."""
-    titre(5, "Diagnostic : absents, choix de visage, rapport")
+    titre(6, "Diagnostic : absents, choix de visage, rapport")
     # KAY est dans la liste mais pas photographié : `absent` décale l'appariement
     # d'un cran plutôt que de le casser. Les deux personnes ajoutées à la fin,
     # elles, n'ont aucune photo disponible : le rapport les signale.
@@ -135,9 +161,9 @@ def etape_5_diagnostic(sortie: Path) -> None:
         print(f"  photo en trop : {chemin.name}")
 
 
-def etape_6_briques(sortie: Path) -> None:
+def etape_7_briques(sortie: Path) -> None:
     """Chaque étape s'utilise seule, sans passer par le pipeline."""
-    titre(6, "Les briques séparément")
+    titre(7, "Les briques séparément")
 
     # a) recadrer sans produire de PDF, avec un détecteur maison
     class DetecteurFixe:
@@ -198,9 +224,10 @@ def main() -> int:
         etape_1_defauts,
         etape_2_cadrage,
         etape_3_couleur,
-        etape_4_mise_en_page,
-        etape_5_diagnostic,
-        etape_6_briques,
+        etape_4_detourage,
+        etape_5_mise_en_page,
+        etape_6_diagnostic,
+        etape_7_briques,
     ):
         etape(args.sortie)
 

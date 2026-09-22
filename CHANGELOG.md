@@ -5,6 +5,69 @@ versionnage sémantique.
 
 ## [Non publié]
 
+## [0.5.0]
+
+### Ajouté
+
+- **Détourage du fond** (`--remove-background`, `SegmentationConfig`). Sur une
+  planche, un fond hétérogène saute aux yeux bien avant un écart de balance des
+  blancs : c'est le traitement qui fait le plus pour la cohérence visuelle. Voir
+  [docs/DOC.md](docs/DOC.md), section 7.
+
+  Le modèle est **MediaPipe SelfieSegmenter**, 244 Ko, embarqué dans la roue et
+  exécuté par `cv2.dnn.readNetFromTFLite` — donc **sans aucune dépendance
+  supplémentaire**. Poids sous Apache-2.0, texte de licence joint comme cette
+  licence l'exige. La roue passe de 257 à 470 Ko ; `u2netp` l'aurait multipliée
+  par 18 et MODNet par 100, pour un gain marginal sur des portraits.
+
+  Le candidat le plus naturel, PP-HumanSeg — dans OpenCV Zoo à côté de YuNet,
+  licence irréprochable — a été **écarté sur la qualité** : mesuré, il efface
+  jusqu'aux deux tiers du visage.
+
+- **Garde-fou sur le masque** (`assess_mask`, `MaskQuality`). Un détourage raté
+  est bien plus laid qu'un fond hétérogène, parce qu'un trombinoscope est
+  nominatif : le fond bizarre passe pour une photo authentique, l'oreille rognée
+  pour un défaut du document. Cinq indicateurs géométriques — donc indépendants
+  des erreurs du réseau qu'ils surveillent — décident, et en cas de doute la
+  photo d'origine est conservée sans interrompre le traitement. Les refus
+  apparaissent dans `BuildReport.background_kept`, sans rendre `report.ok` faux :
+  c'est le repli prévu, pas un échec.
+
+- `Segmenter`, protocole injectable au même titre que `FaceDetector`, et
+  `TrombinoscopeBuilder(..., segmenter=...)` pour brancher un autre modèle.
+
+- `--alpha-gain` : raidit la rampe du masque avant compositing. C'est **le**
+  remède au halo autour des cheveux, et l'érosion n'en est pas un — vérifié à
+  l'œil sur un portrait à fond noir, éroder jusqu'à 3 px entame la mèche sans
+  effacer le liseré, là où un gain de 4 le supprime en la gardant.
+
+### Corrigé
+
+- **Documentation : la licence des poids de MODNet était donnée pour
+  CC BY-NC-SA 4.0 dans `docs/improvements.md` et `CREDITS.md`. C'est faux.** Le
+  README de MODNet publie « the code, **models**, and demos » sous Apache-2.0 ;
+  la CC BY-NC-SA porte sur le jeu de test PPM-100, dans un dépôt séparé, qui
+  n'entre dans aucune distribution. L'erreur consistait exactement dans le
+  réflexe que la section prétendait dénoncer — conclure sans lire la source.
+
+### Modifié
+
+- **`__all__` dans chaque module.** La convention du dépôt l'imposait, neuf
+  modules ne l'avaient pas. Un `__all__` absent laisse `from module import *`
+  exporter tout ce que le module a importé ; un `__all__` qui déclare un nom
+  inexistant ne lève rien à l'import et ment sur l'API. `tests/test_package.py`
+  vérifie désormais les deux, module par module. Seul `__main__.py` en est
+  dispensé : il n'expose rien, c'est le point d'entrée de `python -m`.
+
+- `docs/improvements.md` § 1 réécrit après nouvelle étude du détourage par
+  segmentation : licences de poids relues à la source, quatre modèles réellement
+  exécutés sous `cv2.dnn`, mesures de couverture du visage et de robustesse.
+  Deux enseignements pratiques : **PP-HumanSeg**, seul modèle de segmentation de
+  personne d'OpenCV Zoo et candidat le plus naturel, est inexploitable sur des
+  portraits ; **MediaPipe SelfieSegmenter** (244 Ko, Apache-2.0) tient tête à des
+  modèles cent fois plus lourds et tourne sous `cv2.dnn.readNetFromTFLite`, sans
+  aucune dépendance nouvelle.
+
 ## [0.4.2]
 
 ### Ajouté
@@ -275,7 +338,7 @@ commente que ce qu'il fait.
 - **`Eleve` devient `Person`.** Les champs de prépa française (`cube`, `LV1`,
   `LV2`, `option`, `groupe`, `groupecolle`) laissent place à deux listes libres
   d'étiquettes, qui couvrent le cas d'origine sans imposer son vocabulaire. Table
-  de correspondance dans [docs/DOC.md](docs/DOC.md), section 10.
+  de correspondance dans [docs/DOC.md](docs/DOC.md), section 11.
 - **`trombinoscope/logging.py` devient `trombinoscope/log.py`** et s'appuie sur
   la bibliothèque standard. L'ancien nom masquait `logging` pour tout import
   absolu depuis l'intérieur du paquet.

@@ -23,9 +23,21 @@ from trombinoscope.imageio import (
     write_image,
 )
 from trombinoscope.log import configure, error, info, set_interactive
-from trombinoscope.models import NO_COLOR, ColorConfig, FramingConfig, GridConfig
+from trombinoscope.models import (
+    NO_COLOR,
+    ColorConfig,
+    FramingConfig,
+    GridConfig,
+    SegmentationConfig,
+)
 from trombinoscope.pipeline import BuildOptions, TrombinoscopeBuilder
 from trombinoscope.roster import write_template
+
+__all__ = [
+    "WHITE_BALANCE_CHOICES",
+    "build_parser",
+    "main",
+]
 
 WHITE_BALANCE_CHOICES = ("none", "grayworld", "shades-of-gray", "white-patch")
 
@@ -185,6 +197,61 @@ def _add_build(parser: argparse.ArgumentParser) -> None:
         help="intensité de la correction de teinte, de 0 (aucune) à 1 (complète)",
     )
 
+    segmentation = parser.add_argument_group("détourage du fond")
+    segmentation.add_argument(
+        "--remove-background",
+        action="store_true",
+        help=(
+            "remplace le fond de chaque portrait par un aplat, ce qui homogénéise "
+            "une planche bien plus qu'une correction de teinte. Utilise un modèle "
+            "MediaPipe de 244 Ko livré avec le paquet, sans dépendance "
+            "supplémentaire. Un garde-fou refuse les masques douteux et conserve "
+            "alors la photo d'origine, sans interrompre le traitement"
+        ),
+    )
+    segmentation.add_argument(
+        "--background",
+        default="#ffffff",
+        metavar="COULEUR",
+        help=(
+            "couleur de remplissage, en hexadécimal (#ffffff) ou en R,G,B. "
+            "Un fond clair rend invisible le liseré résiduel autour des cheveux ; "
+            "un fond sombre le montre"
+        ),
+    )
+    segmentation.add_argument(
+        "--alpha-gain",
+        type=float,
+        default=4.0,
+        help=(
+            "raidit la rampe du masque : c'est ce qui supprime le halo autour des "
+            "cheveux, l'érosion n'y suffisant pas. 1 laisse le masque brut, "
+            "au-delà de 8 le contour redevient découpé"
+        ),
+    )
+    segmentation.add_argument(
+        "--background-erode",
+        type=int,
+        default=1,
+        metavar="PX",
+        help=(
+            "rétrécit le masque de tant de pixels avant compositing, pour retirer "
+            "le liseré de fond d'origine que le modèle inclut dans le contour"
+        ),
+    )
+    segmentation.add_argument(
+        "--min-face-coverage",
+        type=float,
+        default=0.90,
+        metavar="FRACTION",
+        help=(
+            "fraction de la boîte du visage devant tomber dans le masque, sinon le "
+            "fond d'origine est conservé. Ne pas monter à 0,95 : la boîte est un "
+            "rectangle et la tête non, donc un masque parfait ne la couvre jamais "
+            "entièrement"
+        ),
+    )
+
     grid = parser.add_argument_group("mise en page")
     grid.add_argument(
         "-c",
@@ -291,6 +358,34 @@ def _color_from(args: argparse.Namespace) -> ColorConfig:
     )
 
 
+def _parse_color(value: str) -> tuple[int, int, int]:
+    """``#rrggbb`` ou ``r,g,b`` → triplet BGR, l'ordre attendu par OpenCV."""
+    text = value.strip().lstrip("#")
+    try:
+        if "," in text:
+            red, green, blue = (int(part) for part in text.split(","))
+        elif len(text) == 6:
+            red, green, blue = (int(text[i : i + 2], 16) for i in (0, 2, 4))
+        else:
+            raise ValueError
+    except ValueError:
+        raise SystemExit(f"couleur illisible : {value!r} (attendu #rrggbb ou r,g,b)") from None
+    if not all(0 <= channel <= 255 for channel in (red, green, blue)):
+        raise SystemExit(f"couleur hors bornes : {value!r}")
+    return (blue, green, red)
+
+
+def _segmentation_from(args: argparse.Namespace) -> SegmentationConfig:
+    """Configuration du détourage. Sans ``--remove-background``, tout est inerte."""
+    return SegmentationConfig(
+        enabled=args.remove_background,
+        background=_parse_color(args.background),
+        alpha_gain=args.alpha_gain,
+        erode_px=args.background_erode,
+        min_face_coverage=args.min_face_coverage,
+    )
+
+
 def _options_from(args: argparse.Namespace) -> BuildOptions:
     return BuildOptions(
         title=args.title,
@@ -309,6 +404,7 @@ def _options_from(args: argparse.Namespace) -> BuildOptions:
             align_eyes=args.align_eyes,
         ),
         color=_color_from(args),
+        segmentation=_segmentation_from(args),
         grid=GridConfig(
             columns=args.columns,
             column_padding=args.padding,

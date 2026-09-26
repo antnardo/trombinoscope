@@ -83,7 +83,7 @@ n'en ont pas besoin et fonctionnent sur des images synthétiques.
 
 Toutes proviennent de [Wikimedia Commons](https://commons.wikimedia.org/) et sont
 sous licence libre. L'attribution ci-dessous est fournie parce que c'est correct
-de le faire, et parce que trois d'entre elles l'exigent.
+de le faire, et parce que cinq d'entre elles l'exigent.
 
 | Fichier local | Sujet | Licence | Auteur |
 | --- | --- | --- | --- |
@@ -104,6 +104,11 @@ s'appliquent à la **distribution** d'œuvres dérivées. Les portraits recadré
 produits par les tests vivent dans un dossier temporaire et ne sont jamais
 publiés ; aucune obligation de partage n'est donc déclenchée. Si vous
 redistribuez ces images ou des dérivés, les clauses s'appliquent pleinement.
+
+Une exception, hors du dépôt et hors de la roue : la planche d'exemple affichée
+en tête du README, jointe à la release v0.4.2, est un dérivé de ces huit
+portraits. Elle est donc diffusée sous CC BY-SA 4.0, que chacune des licences
+ci-dessus permet pour un dérivé, avec l'attribution de ce tableau.
 
 ## Travaux antérieurs
 

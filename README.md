@@ -16,6 +16,14 @@ Le paquet détecte le visage sur chaque photo, recadre au même endroit et à la
 même taille pour tout le monde, homogénéise les couleurs **à l'échelle du lot**,
 puis compose une grille paginée.
 
+![Planche de huit portraits produite par trombinoscope](https://github.com/antnardo/trombinoscope/releases/download/v0.4.2/trombinoscope-planche.jpg)
+
+Planche produite par `trombinoscope build` 0.4.2, réglages par défaut, titre mis
+à part, à partir de huit portraits de Wikimedia Commons. L'image est sous
+licence [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.fr) ;
+auteurs et licences des portraits dans
+[CREDITS.md](https://github.com/antnardo/trombinoscope/blob/main/CREDITS.md#images-de-test).
+
 ## Ce qu'il fait
 
 - **Recadrage à proportion de visage constante.** Que la photo ait été prise à
@@ -37,7 +45,8 @@ puis compose une grille paginée.
   sur [reportlab-layout](https://pypi.org/project/reportlab-layout/).
 - **Détecteur léger et remplaçable.** YuNet en ONNX, 227 Ko, embarqué dans la
   roue. Le détecteur est un protocole : branchez le vôtre si vous préférez.
-- **Détourage du fond, en option.** `--remove-background` remplace le fond de
+- **Détourage du fond, en option — version 0.5, pas encore publiée sur PyPI.**
+  `--remove-background` remplace le fond de
   chaque portrait par un aplat, ce qui homogénéise une planche bien plus qu'une
   correction de teinte. Modèle MediaPipe de 244 Ko embarqué, sans dépendance
   supplémentaire. Un garde-fou refuse les masques douteux et conserve alors la

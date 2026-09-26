@@ -3,7 +3,7 @@
 [![CI](https://github.com/antnardo/trombinoscope/actions/workflows/ci.yml/badge.svg)](https://github.com/antnardo/trombinoscope/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/trombinoscope.svg)](https://pypi.org/project/trombinoscope/)
 [![Python](https://img.shields.io/pypi/pyversions/trombinoscope.svg)](https://pypi.org/project/trombinoscope/)
-[![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](https://github.com/antnardo/trombinoscope/blob/main/LICENSE)
 
 Un dossier de photos brutes, une liste CSV, un PDF prêt à imprimer.
 
@@ -34,7 +34,7 @@ auteurs et licences des portraits dans
   arbitraire. Sur une séance dont la balance des blancs dérive, la dispersion
   chromatique chute de 78 %. C'est la seule chose que ce paquet fait et que les
   bibliothèques de correction couleur existantes ne font pas — elles travaillent
-  toutes image par image. Voir [docs/color.md](docs/color.md).
+  toutes image par image. Voir [docs/color.md](https://github.com/antnardo/trombinoscope/blob/main/docs/color.md).
 - **Appariement positionnel.** Les photos triées par nom de fichier suivent
   l'ordre de la liste. Aucun renommage manuel.
 - **Mise en page soignée.** Pagination automatique, dernière ligne centrée,
@@ -123,12 +123,12 @@ from trombinoscope import load_sqlite
 people = load_sqlite("base.db", "SELECT nom, prenom, redoublant AS badge FROM eleves ORDER BY nom")
 ```
 
-Les [`examples/`](examples/) vont du minimal en trois lignes au tour complet des
+Les [`examples/`](https://github.com/antnardo/trombinoscope/tree/main/examples) vont du minimal en trois lignes au tour complet des
 options, jusqu'à un cas réel branché sur une base SQLite.
 
 ## Quand utiliser autre chose
 
-Ce paquet occupe une case étroite. L'[étude d'originalité](docs/prior-art.md) est
+Ce paquet occupe une case étroite. L'[étude d'originalité](https://github.com/antnardo/trombinoscope/blob/main/docs/prior-art.md) est
 détaillée et n'édulcore rien ; en résumé :
 
 | Votre besoin | Préférez |
@@ -148,13 +148,13 @@ et l'absence d'interface graphique du nôtre.
 
 ## Documentation
 
-- [DOC.md](docs/DOC.md) — référence complète : options, API, formats, recettes
-- [color.md](docs/color.md) — l'étude colorimétrique, mesures à l'appui
-- [prior-art.md](docs/prior-art.md) — état de l'art et étude d'originalité
-- [improvements.md](docs/improvements.md) — pistes examinées et décisions
-- [legacy-review.md](docs/legacy-review.md) — revue du module de 2020 dont ce
+- [DOC.md](https://github.com/antnardo/trombinoscope/blob/main/docs/DOC.md) — référence complète : options, API, formats, recettes
+- [color.md](https://github.com/antnardo/trombinoscope/blob/main/docs/color.md) — l'étude colorimétrique, mesures à l'appui
+- [prior-art.md](https://github.com/antnardo/trombinoscope/blob/main/docs/prior-art.md) — état de l'art et étude d'originalité
+- [improvements.md](https://github.com/antnardo/trombinoscope/blob/main/docs/improvements.md) — pistes examinées et décisions
+- [legacy-review.md](https://github.com/antnardo/trombinoscope/blob/main/docs/legacy-review.md) — revue du module de 2020 dont ce
   paquet est issu, et ce que la réécriture en a tiré
-- [CREDITS.md](CREDITS.md) — modèles, images et travaux réutilisés
+- [CREDITS.md](https://github.com/antnardo/trombinoscope/blob/main/CREDITS.md) — modèles, images et travaux réutilisés
 
 ## Installation
 
@@ -192,5 +192,5 @@ CI vérifie qu'aucun fichier image n'apparaît ni dans le dépôt ni dans la rou
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE). Les composants tiers embarqués ou téléchargés ont
-leurs propres licences, toutes recensées dans [CREDITS.md](CREDITS.md).
+MIT — voir [LICENSE](https://github.com/antnardo/trombinoscope/blob/main/LICENSE). Les composants tiers embarqués ou téléchargés ont
+leurs propres licences, toutes recensées dans [CREDITS.md](https://github.com/antnardo/trombinoscope/blob/main/CREDITS.md).

@@ -8,8 +8,17 @@ version = "0.5.0"
 description = "Génère un trombinoscope PDF prêt à imprimer depuis un dossier de photos brutes et une liste de personnes."
 readme = "README.md"
 requires-python = ">=3.11"
-license = "MIT"
-license-files = ["LICENSE"]
+# Le code est sous MIT, mais la roue embarque aussi les poids de deux modèles
+# tiers, chacun avec le texte de sa licence : YuNet (MIT, Shiqi Yu) et
+# SelfieSegmenter (Apache-2.0). hatchling écarte sans rien dire un chemin qui ne
+# correspond à aucun fichier : après un renommage, relire les License-File du
+# METADATA de la roue.
+license = "MIT AND Apache-2.0"
+license-files = [
+    "LICENSE",
+    "src/trombinoscope/assets/models/LICENSE-YuNet-MIT.txt",
+    "src/trombinoscope/assets/models/LICENSE-Apache-2.0.txt",
+]
 authors = [{ name = "antnardo", email = "antnardo@users.noreply.github.com" }]
 keywords = [
     "trombinoscope",
@@ -26,7 +35,6 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Education",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: French",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",

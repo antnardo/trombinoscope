@@ -43,6 +43,15 @@ versionnage sémantique.
 
 ### Corrigé
 
+- **La roue ne joignait pas la licence de YuNet**, alors que la MIT impose d'en
+  inclure la notice dans toute copie — et ce depuis la 0.1.0 ; `CREDITS.md`
+  affirmait même le contraire. Le texte est désormais livré à côté du modèle,
+  copié tel quel depuis OpenCV Zoo (`assets/models/LICENSE-YuNet-MIT.txt`). Les
+  métadonnées passent de `MIT` à `MIT AND Apache-2.0`, la roue embarquant aussi
+  les poids Apache-2.0 de SelfieSegmenter, et déclarent les trois fichiers de
+  licence (PEP 639). Le classifieur `License :: OSI Approved :: MIT License`
+  disparaît : PEP 639 le remplace par l'expression de licence.
+
 - **Documentation : la licence des poids de MODNet était donnée pour
   CC BY-NC-SA 4.0 dans `docs/improvements.md` et `CREDITS.md`. C'est faux.** Le
   README de MODNet publie « the code, **models**, and demos » sous Apache-2.0 ;

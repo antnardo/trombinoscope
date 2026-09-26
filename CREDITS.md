@@ -2,19 +2,33 @@
 
 ## Embarqué dans la distribution
 
+La roue embarque les poids de deux modèles tiers, chacun avec le texte de sa
+licence. D'où l'expression de licence du paquet, `MIT AND Apache-2.0` : MIT pour
+le code et pour YuNet, Apache-2.0 pour SelfieSegmenter. Les trois textes sont
+déclarés dans `license-files` (PEP 639) et se retrouvent aussi dans
+`*.dist-info/licenses/`.
+
 ### Modèle de détection YuNet
 
 `src/trombinoscope/assets/models/face_detection_yunet_2023mar.onnx` — 227 Ko.
 
 - Source : [OpenCV Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)
 - Auteurs : Wei Wu, Weiyuan Peng, Shiqi Yu
-- Licence : MIT
+- Licence : MIT, Copyright (c) 2020 Shiqi Yu —
+  [texte amont](https://github.com/opencv/opencv_zoo/blob/main/models/face_detection_yunet/LICENSE)
 - Empreinte SHA-256 : `8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4`
 
-La licence MIT du dépôt OpenCV Zoo couvre les poids comme le code, ce qui autorise
-la redistribution dans une roue PyPI — contrairement, par exemple, aux poids
-d'InsightFace ou de BRIA RMBG, réservés à un usage non commercial. Voir
-[docs/improvements.md](docs/improvements.md), section 1.2.
+La licence MIT du dossier `models/face_detection_yunet` couvre les poids comme le
+code, ce qui autorise la redistribution dans une roue PyPI — contrairement, par
+exemple, aux poids d'InsightFace ou de BRIA RMBG, réservés à un usage non
+commercial. Voir [docs/improvements.md](docs/improvements.md), section 1.2. Cette
+licence est propre au modèle : le dépôt OpenCV Zoo est, lui, sous Apache-2.0, et
+renvoie à la licence de chaque modèle.
+
+Le texte de la licence est livré à côté du modèle, dans
+`assets/models/LICENSE-YuNet-MIT.txt`, copié tel quel depuis l'amont. La MIT
+l'exige : sa notice doit figurer « in all copies or substantial portions of the
+Software ». Les roues publiées jusqu'à la 0.4.2 ne la contenaient pas.
 
 ### Modèle de segmentation MediaPipe SelfieSegmenter
 
@@ -28,8 +42,9 @@ d'InsightFace ou de BRIA RMBG, réservés à un usage non commercial. Voir
 - Empreinte SHA-256 : `191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b`
 
 Le texte de la licence est livré à côté du modèle, dans
-`assets/models/LICENSE-Apache-2.0.txt` : Apache-2.0 impose de joindre la licence
-au fichier redistribué, ce que la MIT de YuNet n'exige pas.
+`assets/models/LICENSE-Apache-2.0.txt` : Apache-2.0 impose d'en remettre une
+copie à tout destinataire du fichier (section 4 a), comme la MIT de YuNet impose
+de joindre sa notice.
 
 Une précision de provenance, parce qu'elle diffère de celle de YuNet : le
 `.tflite` n'est pas versionné dans le dépôt GitHub de MediaPipe — il est tiré de

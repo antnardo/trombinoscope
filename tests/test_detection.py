@@ -30,6 +30,12 @@ class TestModelAsset:
         """Le modèle embarqué doit rester négligeable devant la taille de la roue."""
         assert model_path().stat().st_size < 1_000_000
 
+    def test_mit_license_is_shipped_next_to_the_model(self):
+        """La MIT de YuNet impose de joindre sa notice à toute copie du modèle."""
+        licence = model_path().parent / "LICENSE-YuNet-MIT.txt"
+        assert licence.exists()
+        assert "Copyright (c) 2020 Shiqi Yu" in licence.read_text()
+
     def test_unknown_model_raises(self):
         with pytest.raises(FileNotFoundError):
             model_path("inexistant.onnx")

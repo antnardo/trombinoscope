@@ -386,6 +386,7 @@ commente que ce qu'il fait.
 - Le guide ReportLab en PDF (548 Ko) versionné dans l'arborescence.
 
 [Non publié]: https://github.com/antnardo/trombinoscope/compare/v0.4.2...HEAD
+[0.5.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.5.0
 [0.4.2]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.2
 [0.4.1]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.1
 [0.4.0]: https://github.com/antnardo/trombinoscope/releases/tag/v0.4.0

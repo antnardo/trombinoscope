@@ -45,7 +45,7 @@ auteurs et licences des portraits dans
   sur [reportlab-layout](https://pypi.org/project/reportlab-layout/).
 - **Détecteur léger et remplaçable.** YuNet en ONNX, 227 Ko, embarqué dans la
   roue. Le détecteur est un protocole : branchez le vôtre si vous préférez.
-- **Détourage du fond, en option — version 0.5, pas encore publiée sur PyPI.**
+- **Détourage du fond, en option** *(depuis la 0.5)*.
   `--remove-background` remplace le fond de
   chaque portrait par un aplat, ce qui homogénéise une planche bien plus qu'une
   correction de teinte. Modèle MediaPipe de 244 Ko embarqué, sans dépendance
